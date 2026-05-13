@@ -1,72 +1,1032 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Hotel Reservation System</title>
-    <link rel="stylesheet" href="/static/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Book Hotel</title>
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 
-<nav>
-    <h2>Hotel Reservation System</h2>
-    <button onclick="logout()">Logout</button>
-</nav>
+<!-- ══════════════════════════════════════════
+  PAGE: REGISTER
+══════════════════════════════════════════ -->
+<div id="registerPage" class="page active">
+  <div class="auth-wrap">
+    <div class="auth-bar">Register</div>
+    <div class="auth-body">
+      <div class="auth-card">
+        <h1>Create Account</h1>
+        <p class="auth-sub">Register securely with 2FA verification.</p>
+        <div class="field">
+          <input type="email" id="regEmail" placeholder="E-mail">
+          <div class="ferr" id="regEmailErr">Invalid email format</div>
+        </div>
+        <div class="field">
+          <input type="password" id="regPassword" placeholder="Password">
+          <div class="ferr" id="regPasswordErr">Password is not strong enough</div>
+        </div>
+        <div class="field">
+          <input type="password" id="regConfirm" placeholder="Confirm Password">
+          <div class="fhint">Must include 8+ chars, 1 uppercase &amp; number</div>
+        </div>
+        <div class="field">
+          <input type="tel" id="regPhone" placeholder="Phone Number">
+        </div>
+        <button class="btn-primary" onclick="submitRegister()">Create Account</button>
+        <div class="auth-switch">Have an account? <a href="#" onclick="showPage('loginPage')">Sign In</a></div>
+        <div class="auth-foot">2FA code will be sent by email or SMS.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<section id="homePage" class="page active">
-    <h1>Welcome</h1>
-    <p>Hotel reservation system demo.</p>
-    <button onclick="showPage('loginPage')">Login</button>
-</section>
+<!-- ══════════════════════════════════════════
+  PAGE: LOGIN
+══════════════════════════════════════════ -->
+<div id="loginPage" class="page">
+  <div class="auth-wrap">
+    <div class="auth-bar">Log In</div>
+    <div class="auth-body">
+      <div class="auth-card">
+        <h1>Sign In</h1>
+        <p class="auth-sub">Access your account securely with 2FA verification.</p>
+        <div class="field">
+          <input type="email" id="loginEmail" placeholder="E-mail">
+        </div>
+        <div class="field">
+          <input type="password" id="loginPassword" placeholder="Password">
+          <div class="ferr" id="loginErr">Invalid email or password!</div>
+          <a href="#" class="forgot">Forgot Password?</a>
+        </div>
+        <button class="btn-primary" onclick="submitLogin()">Sign In</button>
+        <div class="auth-switch">Don't have an account? <a href="#" onclick="showPage('registerPage')">Sign Up</a></div>
+        <div class="auth-foot">2FA code will be sent by email or SMS.</div>
+      </div>
+    </div>
+  </div>
+</div>
 
-<section id="loginPage" class="page">
-    <h1>Login</h1>
+<!-- ══════════════════════════════════════════
+  PAGE: 2FA
+══════════════════════════════════════════ -->
+<div id="twoFAPage" class="page">
+  <div class="auth-wrap">
+    <div class="auth-bar">2FA Verification</div>
+    <div class="auth-body">
+      <div class="auth-card">
+        <h1>Verify Your Account</h1>
+        <p class="twofa-sub">We sent a 6-digit verification code to your email or phone.</p>
+        <div class="field">
+          <input type="text" id="twofaCode" placeholder="Enter the 6-digit code" maxlength="6">
+          <div class="ferr" id="twofaErr">Invalid or expired code</div>
+        </div>
+        <button class="btn-primary" onclick="verify2FA()">Verify Code</button>
+        <div class="twofa-resend">Didn't receive the code? <a href="#" onclick="resendCode(event)">Resend</a></div>
+        <div class="twofa-timer">Code expires in <b id="twofaTimer">01:30</b></div>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <input type="email" id="loginEmail" placeholder="Email">
-    <input type="password" id="loginPassword" placeholder="Password">
+<!-- ══════════════════════════════════════════
+  PAGE: HOME (CUSTOMER)
+══════════════════════════════════════════ -->
+<div id="homePage" class="page">
+  <!-- Navbar -->
+  <nav class="navbar">
+    <span class="nav-logo">Book Hotel</span>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('homePage')">Home</a>
+      <a href="#">Reservations</a>
+    </div>
+    <div class="nav-right">
+      <button class="nav-chatbot" onclick="toggleChatbot()" title="Chat Bot">🤖</button>
+      <button class="nav-logout" onclick="logout()">Logout</button>
+      <button class="nav-avatar"></button>
+    </div>
+  </nav>
 
-    <button onclick="login()">Login</button>
+  <div class="home-wrap">
+    <!-- Hero -->
+    <div class="home-hero">
+      <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80" alt="Hotel pool">
+    </div>
 
-    <p id="loginMessage"></p>
-</section>
+    <!-- Search Bar -->
+    <div class="search-wrap">
+      <div class="search-bar">
+        <div class="sbar-field" style="flex:1.4">
+          <label>✈ Destination</label>
+          <input type="text" id="searchDest" placeholder="Where are you going?">
+        </div>
+        <div class="sbar-field">
+          <label>📅 Check-in</label>
+          <input type="date" id="searchCheckin">
+        </div>
+        <div class="sbar-field">
+          <label>📅 Check-out</label>
+          <input type="date" id="searchCheckout">
+        </div>
+        <div class="sbar-field">
+          <label>🛏 Guests &amp; rooms</label>
+          <input type="text" id="searchGuests" placeholder="2 adults, 1 room">
+        </div>
+        <button class="sbar-search" onclick="goSearch()">🔍</button>
+      </div>
+    </div>
 
-<section id="twofaPage" class="page">
-    <h1>2FA Verification</h1>
+    <!-- Hotel Cards -->
+    <h2 class="sec-title">Recommended for you</h2>
+    <div class="hotels-grid" id="hotelsGrid">
+      <!-- filled by JS -->
+    </div>
 
-    <p>Check terminal for test code.</p>
+    <!-- Pagination -->
+    <div class="pagination">
+      <button class="pg-btn" onclick="changePage(-1)">‹</button>
+      <span id="pageInfo">1 of 4</span>
+      <button class="pg-btn" onclick="changePage(1)">›</button>
+    </div>
+  </div>
+</div>
 
-    <input type="text" id="twofaCode" placeholder="6 digit code">
+<!-- ══════════════════════════════════════════
+  PAGE: SEARCH RESULTS
+══════════════════════════════════════════ -->
+<div id="searchPage" class="page">
+  <nav class="navbar">
+    <span class="nav-logo">Book Hotel</span>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('homePage')">Home</a>
+      <a href="#">Reservations</a>
+    </div>
+    <div class="nav-right">
+      <button class="nav-chatbot" onclick="toggleChatbot()">🤖</button>
+      <button class="nav-logout" onclick="logout()">Logout</button>
+      <button class="nav-avatar"></button>
+    </div>
+  </nav>
 
-    <button onclick="verify2FA()">Verify</button>
+  <div class="search-page-layout">
+    <!-- Sidebar -->
+    <div class="s-sidebar">
+      <button class="s-back" onclick="showPage('homePage')">← Your Search</button>
+      <div class="s-heading">Your Search</div>
 
-    <p id="twofaMessage"></p>
-</section>
+      <div class="s-lbl">Destination</div>
+      <div class="s-inp-wrap">
+        <span class="s-ico">📍</span>
+        <input class="s-inp" type="text" id="sDest" value="Bafra, İskele / Kuzey Kıbrıs">
+      </div>
 
-<section id="customerPage" class="page">
-    <h1>Customer Dashboard</h1>
+      <div class="s-lbl">Check-in</div>
+      <div class="s-inp-wrap">
+        <span class="s-ico">📅</span>
+        <input class="s-inp" type="text" id="sCheckin" value="Saturday, 20 July 2026">
+      </div>
 
-    <button onclick="loadHotels()">View Hotels</button>
+      <div class="s-lbl">Check-out</div>
+      <div class="s-inp-wrap">
+        <span class="s-ico">📅</span>
+        <input class="s-inp" type="text" id="sCheckout" value="Thursday, 25 July 2026">
+      </div>
 
-    <div id="customerHotels"></div>
-</section>
+      <div class="s-lbl">Guests</div>
+      <div class="s-inp-wrap">
+        <span class="s-ico">🛏</span>
+        <input class="s-inp" type="text" value="2 adults, 1 room">
+      </div>
 
-<section id="managerPage" class="page">
-    <h1>Hotel Manager Dashboard</h1>
+      <button class="s-search-btn" onclick="doSearch()">Search</button>
 
-    <p>Manager can manage assigned hotels and rooms here.</p>
+      <div class="filter-title">Popular Filters</div>
+      <label class="filter-item"><input type="checkbox" checked> Breakfast Included</label>
+      <label class="filter-item"><input type="checkbox"> Free Parking</label>
+      <label class="filter-item"><input type="checkbox"> Swimming Pool</label>
+      <label class="filter-item"><input type="checkbox"> Spa &amp; Wellness</label>
+      <label class="filter-item"><input type="checkbox"> Room Service</label>
 
-    <button onclick="loadHotels()">View Hotels</button>
+      <div class="filter-title">Price Range</div>
+      <div class="price-row">
+        <input class="price-inp" type="text" value="0₺">
+        <span>-</span>
+        <input class="price-inp" type="text" value="0₺">
+      </div>
 
-    <div id="managerHotels"></div>
-</section>
+      <div class="filter-title">Ratings</div>
+      <label class="rating-item"><input type="radio" name="rating"> 5⭐</label>
+      <label class="rating-item"><input type="radio" name="rating"> 4⭐</label>
+      <label class="rating-item"><input type="radio" name="rating"> 3⭐</label>
+      <label class="rating-item"><input type="radio" name="rating"> 2⭐</label>
+      <label class="rating-item"><input type="radio" name="rating"> 1⭐</label>
+    </div>
 
-<section id="adminPage" class="page">
-    <h1>Admin Dashboard</h1>
+    <!-- Results -->
+    <div class="s-main">
+      <div id="searchResultInfo" class="s-result-info">15 filtered results for İskele/Bafra, 20–25 July, 1 room</div>
+      <div id="searchResultTitle" class="s-result-title">Breakfast Included</div>
+      <div class="sort-row">
+        <span></span>
+        <select class="sort-sel"><option>sort by</option><option>Price: Low to High</option><option>Price: High to Low</option><option>Rating</option></select>
+      </div>
+      <div id="searchResults"></div>
+      <div class="pagination">
+        <button class="pg-btn">‹</button>
+        <span>1 of 3</span>
+        <button class="pg-btn">›</button>
+      </div>
+    </div>
+  </div>
+</div>
 
-    <p>Admin can manage all hotels, rooms, users, and reservations.</p>
+<!-- ══════════════════════════════════════════
+  PAGE: HOTEL DETAIL
+══════════════════════════════════════════ -->
+<div id="hotelDetailPage" class="page">
+  <!-- Detail search bar -->
+  <div class="detail-bar">
+    <div class="detail-bar-inner">
+      <div class="db-field" style="flex:1.4">
+        <label>✈ Destination</label>
+        <span>The Arkın İskele</span>
+      </div>
+      <div class="db-field">
+        <label>📅 Check-in</label>
+        <span>14 Oct 26 Wednesday</span>
+      </div>
+      <div class="db-field">
+        <label>📅 Check-out</label>
+        <span>23 Oct 26 Friday</span>
+      </div>
+      <div class="db-field">
+        <label>🛏 Guests &amp; rooms</label>
+        <span>2 adults, 1 room</span>
+      </div>
+      <button class="db-search">🔍</button>
+    </div>
+  </div>
 
-    <button onclick="loadHotels()">View All Hotels</button>
+  <div class="detail-content">
+    <h1 class="detail-hotel-name">The Arkın İskele Hotel</h1>
+    <div class="detail-hotel-loc">📍 İskele / Famagusta, 99850 Vokolidha, Northern Cyprus</div>
 
-    <div id="adminHotels"></div>
-</section>
+    <!-- Gallery -->
+    <div class="detail-gallery">
+      <div class="gal-main">
+        <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80" alt="Hotel">
+      </div>
+      <div class="gal-side">
+        <img src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=300&q=80" alt="Hotel">
+        <div class="gal-more">
+          <img src="https://images.unsplash.com/photo-1540541338287-41700207dee6?w=300&q=80" alt="Hotel">
+          <div class="gal-more-overlay">+250 photo</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="detail-tabs">
+      <div class="detail-tabs-left">
+        <button class="d-tab active">Overview</button>
+        <button class="d-tab">Rooms</button>
+        <button class="d-tab">Facilities</button>
+      </div>
+      <div class="detail-price-action">
+        <span class="detail-price-label">118.800₺</span>
+        <button class="btn-view-rooms" onclick="showPage('bookingPage')">View Rooms</button>
+      </div>
+    </div>
+
+    <!-- Detail grid -->
+    <div class="detail-grid">
+      <div>
+        <p class="detail-desc">Located in the Gazimağusa region of Cyprus, The Arkın İskele Hotel offers guests a full and enjoyable holiday experience with its Ultra All-Inclusive concept. Situated right by the sea, the hotel features a 1 km long private sandy beach and a pier. It provides a beautiful atmosphere for guests who want to enjoy the sea and the sun in Cyprus. The property also includes...</p>
+        <button class="see-more-btn">See More</button>
+        <div class="amenity-tags">
+          <span class="amenity-tag">Honeymoon Friendly</span>
+          <span class="amenity-tag">Beachfront</span>
+          <span class="amenity-tag">Sandy Beach</span>
+          <span class="amenity-tag">Private Beach</span>
+          <span class="amenity-tag">Family Friendly</span>
+          <span class="amenity-tag">Wheelchair Accessible</span>
+        </div>
+        <button class="see-all-btn">See all amenities ›</button>
+        <div class="detail-rating-row">
+          <div class="detail-score-badge">9.4</div>
+          <div>
+            <div class="detail-score-txt">Excellent</div>
+          </div>
+          <button class="detail-comments-link">See all comments</button>
+        </div>
+      </div>
+
+      <!-- Booking side -->
+      <div class="booking-side">
+        <div class="booking-side-title">Select Room 🛏</div>
+        <select class="room-sel"><option>2 adults, 1 room</option></select>
+        <div class="booking-side-title">Select Date 📅</div>
+        <div class="cal-nav-row">
+          <button class="cal-nav-btn">‹</button>
+          <span class="cal-month-lbl">October 2026</span>
+          <button class="cal-nav-btn">›</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+
+    <!-- Rooms -->
+    <h2 class="rooms-sec-title">Rooms</h2>
+    <div class="room-row">
+      <img class="room-row-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&q=80" alt="Room">
+      <div class="room-row-body">
+        <div class="room-row-name">Standard Sea View Room – UHD</div>
+        <div class="room-row-tag">🏆 Ultra All Inclusive</div>
+        <button class="room-row-link">All Features and Photos</button>
+      </div>
+      <div class="room-row-right">
+        <div class="room-nights-lbl">9 Night</div>
+        <div class="room-price-old">326.400,00 ₺</div>
+        <div class="room-price-main">277.440,00 ₺</div>
+        <button class="btn-book-now" onclick="showPage('bookingPage')">Book Now ›</button>
+      </div>
+    </div>
+    <div class="room-row">
+      <img class="room-row-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&q=80" alt="Room">
+      <div class="room-row-body">
+        <div class="room-row-name">Standard Partial Sea View Room – UHD</div>
+        <div class="room-row-tag">🏆 Ultra All Inclusive</div>
+        <button class="room-row-link">All Features and Photos</button>
+      </div>
+      <div class="room-row-right">
+        <div class="room-nights-lbl">9 Night</div>
+        <div class="room-price-old">273.000,00 ₺</div>
+        <div class="room-price-main">231.200,00 ₺</div>
+        <button class="btn-book-now" onclick="showPage('bookingPage')">Book Now ›</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: BOOKING (GUEST INFO)
+══════════════════════════════════════════ -->
+<div id="bookingPage" class="page">
+  <nav class="navbar">
+    <span class="nav-logo">Book Hotel</span>
+    <div class="nav-links">
+      <a href="#" onclick="showPage('homePage')">Home</a>
+      <a href="#">Reservations</a>
+    </div>
+    <div class="nav-right">
+      <button class="nav-chatbot" onclick="toggleChatbot()">🤖</button>
+      <button class="nav-logout" onclick="logout()">Logout</button>
+      <button class="nav-avatar"></button>
+    </div>
+  </nav>
+
+  <div class="booking-steps">
+    <div class="bstep active"><div class="bstep-num">1</div> Guest Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep"><div class="bstep-num">2</div> Payment Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep"><div class="bstep-num">3</div> Confirmation</div>
+  </div>
+
+  <div class="booking-layout">
+    <div>
+      <!-- Transportation -->
+      <div class="bcard">
+        <div class="bcard-title">Transportation Services</div>
+        <div class="bcard-sub">You can add flight tickets and transfer services to your reservation.</div>
+        <div class="add-btns">
+          <button class="add-btn">+ Add Flight</button>
+          <button class="add-btn">+ Add Transfer</button>
+        </div>
+      </div>
+
+      <!-- Guest Info -->
+      <div class="bcard">
+        <div class="bcard-title">Guest Information</div>
+        <div class="guest-section">
+          <div class="guest-sec-title">1. Adult Information <span class="guest-sec-badge">(Required)</span></div>
+          <div class="gender-row">
+            <label class="gender-opt"><input type="radio" name="gender1" checked> Female</label>
+            <label class="gender-opt"><input type="radio" name="gender1"> Male</label>
+          </div>
+          <div class="form-grid">
+            <input class="form-inp" type="text" placeholder="Name">
+            <input class="form-inp" type="text" placeholder="Surname">
+            <input class="form-inp" type="email" placeholder="Email address">
+            <input class="form-inp" type="tel" placeholder="Phone number">
+            <input class="form-inp full" type="text" placeholder="ID number">
+          </div>
+        </div>
+        <div class="guest-collapse">
+          <div>
+            <div class="guest-collapse-title">2. Adult Information</div>
+            <div class="guest-sec-badge">(Optional)</div>
+          </div>
+          <span>⌄</span>
+        </div>
+        <div class="extras-checks">
+          <label class="extra-chk"><input type="checkbox"> We are a honeymoon couple</label>
+          <label class="extra-chk"><input type="checkbox"> My billing information is different from above</label>
+          <label class="extra-chk"><input type="checkbox"> My contact information is different from above</label>
+          <label class="extra-chk"><input type="checkbox"> I have a note for the property</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Card -->
+    <div>
+      <div class="order-card">
+        <div class="order-score-row">
+          <div class="order-badge">9.4</div>
+          <div class="order-score-txt">Excellent</div>
+        </div>
+        <div class="order-hotel-name">The Arkın İskele</div>
+        <div class="order-hotel-loc">📍 İskele / Northern Cyprus</div>
+        <div class="order-dates">14 Oct 26 – 23 Oct 26</div>
+        <div class="order-checkin">📅 Check-in: Wed, Check-out: Fri</div>
+        <div class="order-guests-row">👥 2 Adults</div>
+        <div class="order-room-row">
+          <img class="order-room-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80" alt="Room">
+          <div>
+            <div class="order-room-name">Standard Sea View Room – UHD</div>
+            <div class="order-room-tag">🏆 Ultra All Inclusive</div>
+            <div class="order-room-feats">
+              <span class="order-feat">Minibar</span>
+              <span class="order-feat">Wake-up Service</span>
+              <span class="order-feat">Music Streaming</span>
+              <span class="order-feat">Bathroom Phone</span>
+            </div>
+            <button class="order-see-all">See all (10)</button>
+          </div>
+        </div>
+        <div class="price-line">
+          <span class="price-lbl">Room Price</span>
+          <div>
+            <div class="price-old-val">326.400,00 ₺</div>
+            <span class="price-curr">277.440,00 ₺</span>
+          </div>
+        </div>
+        <div class="price-total-line">
+          <span class="price-total-lbl">Total Price</span>
+          <span class="price-total-val">277.440,00 ₺</span>
+        </div>
+        <button class="btn-proceed" onclick="showPage('paymentPage')">Proceed to Payment →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: PAYMENT
+══════════════════════════════════════════ -->
+<div id="paymentPage" class="page">
+  <nav class="navbar">
+    <span class="nav-logo">Book Hotel</span>
+    <div class="nav-links"><a href="#" onclick="showPage('homePage')">Home</a></div>
+    <div class="nav-right">
+      <button class="nav-chatbot" onclick="toggleChatbot()">🤖</button>
+      <button class="nav-logout" onclick="logout()">Logout</button>
+      <button class="nav-avatar"></button>
+    </div>
+  </nav>
+
+  <div class="booking-steps">
+    <div class="bstep"><div class="bstep-num">1</div> Guest Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep active"><div class="bstep-num">2</div> Payment Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep"><div class="bstep-num">3</div> Confirmation</div>
+  </div>
+
+  <div class="booking-layout">
+    <div>
+      <!-- Coupon -->
+      <div class="bcard">
+        <div class="bcard-title">My Coupons</div>
+        <div class="bcard-sub">Select your coupon and complete your reservation at a better price.</div>
+        <div class="coupon-row">
+          <input class="coupon-inp" type="text" placeholder="Enter Discount Code">
+          <button class="btn-apply">Apply</button>
+        </div>
+      </div>
+
+      <!-- Payment methods -->
+      <div class="bcard">
+        <div class="bcard-title">Select Payment Methods</div>
+
+        <!-- Credit Card (open) -->
+        <div class="pay-accordion">
+          <div class="pay-acc-head open">
+            <span class="pay-acc-title">Bank/Credit Card</span>
+            <div class="pay-logos">
+              <span class="pay-logo">MASTERCARD</span>
+              <span class="pay-logo">VISA</span>
+              <span class="pay-logo">AMEX</span>
+              <span>⌃</span>
+            </div>
+          </div>
+          <div class="pay-acc-body">
+            <div class="pay-tabs">
+              <button class="pay-tab active">💳 Credit Card</button>
+              <button class="pay-tab">💳 Multiple Credit Cards</button>
+            </div>
+            <div class="cc-layout">
+              <div class="cc-fields">
+                <input class="form-inp" type="text" placeholder="Name on Card" id="ccName" oninput="updateCard()">
+                <input class="form-inp" type="text" placeholder="Card Number" id="ccNum" maxlength="19" oninput="updateCard()">
+                <div style="display:flex;gap:8px">
+                  <input class="form-inp" type="text" placeholder="Expiry Date" id="ccExpiry" style="flex:1" oninput="updateCard()">
+                  <input class="form-inp" type="text" placeholder="CVC/CVV" id="ccCvc" maxlength="3" style="flex:1">
+                </div>
+              </div>
+              <div class="cc-visual">
+                <div class="cc-chip">▣</div>
+                <div class="cc-num" id="cardNumDisplay">0000 0000 0000 0000</div>
+                <div class="cc-meta">
+                  <span>⬛ 1/30</span>
+                  <span>⬛ 123</span>
+                </div>
+                <div class="cc-holder" id="cardHolderDisplay">CARDHOLDER</div>
+              </div>
+            </div>
+            <label class="agree-row">
+              <input type="checkbox">
+              I have read and accept the Pre-Information Form and the Service Agreement regarding my reservation.
+            </label>
+          </div>
+        </div>
+
+        <!-- Bank Transfer (collapsed) -->
+        <div class="pay-accordion">
+          <div class="pay-acc-head">
+            <span class="pay-acc-title">Bank Transfer</span>
+            <div class="pay-logos">
+              <span class="pay-logo">DISCOVER</span>
+              <span class="pay-logo">AMEX</span>
+              <span>⌄</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Installment (collapsed) -->
+        <div class="pay-accordion">
+          <div class="pay-acc-head">
+            <span class="pay-acc-title">Installment Payment</span>
+            <div class="pay-logos">
+              <span class="pay-logo">DISCOVER</span>
+              <span class="pay-logo">MASTERCARD</span>
+              <span class="pay-logo">VISA</span>
+              <span>⌄</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Order Card -->
+    <div>
+      <div class="order-card">
+        <div class="order-score-row">
+          <div class="order-badge">9.4</div>
+          <div class="order-score-txt">Excellent</div>
+        </div>
+        <div class="order-hotel-name">The Arkın İskele</div>
+        <div class="order-hotel-loc">📍 İskele / Northern Cyprus</div>
+        <div class="order-dates">14 Oct 26 – 23 Oct 26</div>
+        <div class="order-checkin">📅 Check-in: Wed, Check-out: Fri</div>
+        <div class="order-guests-row">👥 2 Adults</div>
+        <div class="order-room-row">
+          <img class="order-room-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80" alt="Room">
+          <div>
+            <div class="order-room-name">Standard Sea View Room – UHD</div>
+            <div class="order-room-tag">🏆 Ultra All Inclusive</div>
+            <div class="order-room-feats">
+              <span class="order-feat">Minibar</span>
+              <span class="order-feat">Wake-up Service</span>
+              <span class="order-feat">Music Streaming</span>
+              <span class="order-feat">Bathroom Phone</span>
+            </div>
+            <button class="order-see-all">See all (10)</button>
+          </div>
+        </div>
+        <div class="price-line">
+          <span class="price-lbl">Room Price</span>
+          <div>
+            <div class="price-old-val">326.400,00 ₺</div>
+            <span class="price-curr">277.440,00 ₺</span>
+          </div>
+        </div>
+        <div class="price-total-line">
+          <span class="price-total-lbl">Total Price</span>
+          <span class="price-total-val">277.440,00 ₺</span>
+        </div>
+        <button class="btn-proceed" onclick="showPage('paySuccessPage')">Complete Payment →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: PAYMENT SUCCESS
+══════════════════════════════════════════ -->
+<div id="paySuccessPage" class="page">
+  <div class="confirm-steps">
+    <div class="bstep"><div class="bstep-num">1</div> Guest Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep"><div class="bstep-num">2</div> Payment Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep active"><div class="bstep-num">3</div> Confirmation</div>
+  </div>
+  <div class="confirm-wrap">
+    <div class="confirm-card">
+      <div class="confirm-icon ok">✓</div>
+      <div class="confirm-title">Payment Successful!</div>
+      <p class="confirm-sub">Your reservation has been successfully completed.</p>
+      <div class="confirm-detail-box">
+        <div class="confirm-detail-title">Payment Details</div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Booking ID</span>
+          <span class="confirm-row-val">BK-2026-789456</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Date &amp; Time</span>
+          <span class="confirm-row-val">January 15, 2026 at 4:44 PM</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Amount Paid</span>
+          <span class="confirm-row-val big">277.440,00 ₺</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Payment Method</span>
+          <span class="confirm-row-val">Visa ending in 0000</span>
+        </div>
+      </div>
+      <div class="confirm-notice">
+        <span class="confirm-notice-ico">✉️</span>
+        Booking and payment details have been sent via email and SMS.
+      </div>
+      <div class="confirm-btns">
+        <button class="btn-cf-primary" onclick="showPage('homePage')">View Booking Details →</button>
+        <button class="btn-cf-outline">⬇ Download Receipt</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: PAYMENT FAIL
+══════════════════════════════════════════ -->
+<div id="payFailPage" class="page">
+  <div class="confirm-steps">
+    <div class="bstep"><div class="bstep-num">1</div> Guest Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep"><div class="bstep-num">2</div> Payment Information</div>
+    <div class="bstep-line"></div>
+    <div class="bstep active"><div class="bstep-num">3</div> Confirmation</div>
+  </div>
+  <div class="confirm-wrap">
+    <div class="confirm-card">
+      <div class="confirm-icon fail">!</div>
+      <div class="confirm-title">Payment Unsuccessful!</div>
+      <p class="confirm-sub">We couldn't complete your payment</p>
+      <p class="confirm-sub2">Please check your card details or try another payment method.</p>
+      <div class="confirm-detail-box">
+        <div class="confirm-detail-title">Booking Details</div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Booking ID</span>
+          <span class="confirm-row-val">BK-2026-789456</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Status</span>
+          <span class="confirm-row-val">Payment Failed</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Reason</span>
+          <span class="confirm-row-val">Card Verification Failed</span>
+        </div>
+        <div class="confirm-row">
+          <span class="confirm-row-lbl">Total Amount</span>
+          <span class="confirm-row-val big">277.440,00 ₺</span>
+        </div>
+      </div>
+      <div class="confirm-notice fail-notice">
+        <span class="confirm-notice-ico">🕐</span>
+        Your reservation is not confirmed yet. Your booking progress will be saved for 10 minutes.
+      </div>
+      <div class="confirm-btns">
+        <button class="btn-cf-primary" onclick="showPage('paymentPage')">Retry Payment →</button>
+        <button class="btn-cf-outline" onclick="showPage('paymentPage')">Change Payment Method</button>
+      </div>
+      <button class="confirm-back-link" onclick="showPage('bookingPage')">Back to Booking Details</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: HOTEL MANAGER DASHBOARD
+══════════════════════════════════════════ -->
+<div id="managerDashPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Hotel Manager</div>
+      <div class="snav">
+        <button class="snav-btn active" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">Dashboard</div>
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-lbl">Total Bookings</div><div class="stat-val">248</div><div class="stat-change">+12% from last month</div></div>
+        <div class="stat-card"><div class="stat-lbl">Revenue</div><div class="stat-val">$45.230</div><div class="stat-change">+8% from last month</div></div>
+        <div class="stat-card"><div class="stat-lbl">Occupancy Rate</div><div class="stat-val">78%</div><div class="stat-change">+5% from last month</div></div>
+      </div>
+      <div class="activity-card">
+        <div class="activity-title">Recent Activity</div>
+        <div class="activity-item"><div><div class="act-title">New booking received</div><div class="act-sub">Deluxe Suit – May 10–12</div></div><span class="act-time">2 hours ago</span></div>
+        <div class="activity-item"><div><div class="act-title">Room 305 checked out</div><div class="act-sub">Standard Room</div></div><span class="act-time">5 hours ago</span></div>
+        <div class="activity-item"><div><div class="act-title">Payment received</div><div class="act-sub">Booking #1247 – $450</div></div><span class="act-time">1 day ago</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: MANAGER ROOMS
+══════════════════════════════════════════ -->
+<div id="managerRoomsPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Hotel Manager</div>
+      <div class="snav">
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">Room Management</div>
+      <div class="rooms-grid">
+        <div class="rm-card">
+          <div class="rm-card-top"><div><div class="rm-card-name">Deluxe King Suit</div><div class="rm-card-count">5 rooms</div></div><span class="rm-badge avail">Available</span></div>
+          <div class="rm-price">$250<span class="per">/night</span></div>
+          <img class="rm-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80" alt="Room">
+          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+        </div>
+        <div class="rm-card">
+          <div class="rm-card-top"><div><div class="rm-card-name">Standard Double</div><div class="rm-card-count">12 rooms</div></div><span class="rm-badge avail">Available</span></div>
+          <div class="rm-price">$120<span class="per">/night</span></div>
+          <img class="rm-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80" alt="Room">
+          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+        </div>
+        <div class="rm-card">
+          <div class="rm-card-top"><div><div class="rm-card-name">Executive Suit</div><div class="rm-card-count">3 rooms</div></div><span class="rm-badge unavail">Unavailable</span></div>
+          <div class="rm-price">$350<span class="per">/night</span></div>
+          <img class="rm-img" src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&q=80" alt="Room">
+          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+        </div>
+        <div class="rm-card">
+          <div class="rm-card-top"><div><div class="rm-card-name">Premium Ocean View</div><div class="rm-card-count">8 rooms</div></div><span class="rm-badge avail">Available</span></div>
+          <div class="rm-price">$280<span class="per">/night</span></div>
+          <img class="rm-img" src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80" alt="Room">
+          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: MANAGER MEDIA
+══════════════════════════════════════════ -->
+<div id="managerMediaPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Hotel Manager</div>
+      <div class="snav">
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">Photo Upload</div>
+      <div class="drop-zone" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" onclick="document.getElementById('mediaFileInput').click()">
+        <div class="drop-ico">⬆</div>
+        <div class="drop-title">Drag &amp; drop hotel images here</div>
+        <div class="drop-sub">or click to browse files</div>
+        <input type="file" id="mediaFileInput" style="display:none" multiple accept="image/*">
+      </div>
+      <div class="dash-main-title" style="font-size:16px;margin-bottom:12px">Upload Images</div>
+      <div class="media-grid">
+        <img src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=300&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=300&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=300&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=300&q=80" alt="">
+        <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=300&q=80" alt="">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: MANAGER ANALYTICS
+══════════════════════════════════════════ -->
+<div id="managerAnalyticsPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Hotel Manager</div>
+      <div class="snav">
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">Analytics</div>
+      <div class="chart-card">
+        <div class="chart-card-title">Revenue Overview</div>
+        <canvas id="revenueChart" height="80"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Booking Trends</div>
+        <canvas id="bookingChart" height="100"></canvas>
+      </div>
+      <div class="bottom-grid">
+        <div class="bottom-card">
+          <div class="bottom-card-title">Top Room Types</div>
+          <div class="bc-row"><span>Deluxe King Suite</span><span>145 bookings</span></div>
+          <div class="bc-row"><span>Standard Double</span><span>132 bookings</span></div>
+          <div class="bc-row"><span>Premium Ocean View</span><span>98 bookings</span></div>
+        </div>
+        <div class="bottom-card">
+          <div class="bottom-card-title">Performance Metrics</div>
+          <div class="bc-row"><span>Average Stay Duration</span><span>3.2 days</span></div>
+          <div class="bc-row"><span>Cancellation Rate</span><span>8.5%</span></div>
+          <div class="bc-row"><span>Customer Satisfaction</span><span>4.7/5</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: ADMIN DASHBOARD
+══════════════════════════════════════════ -->
+<div id="adminDashPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Admin</div>
+      <div class="snav">
+        <button class="snav-btn active" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
+        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">System Overview</div>
+      <div class="stats-grid-4">
+        <div class="stat-card"><div class="stat-lbl">Total Hotels</div><div class="stat-val">45</div></div>
+        <div class="stat-card"><div class="stat-lbl">Active Users</div><div class="stat-val">1.248</div></div>
+        <div class="stat-card"><div class="stat-lbl">Total Revenue</div><div class="stat-val">$2.1M</div></div>
+        <div class="stat-card"><div class="stat-lbl">System Health</div><div class="stat-val ok">Good</div></div>
+      </div>
+      <div class="admin-panels">
+        <div class="admin-panel">
+          <div class="admin-panel-title">Recent Hotels Added</div>
+          <div class="admin-hotel-item"><div><div class="admin-hotel-name">Sunset Resort &amp; Spa</div><div class="admin-hotel-city">Miami, FL</div></div><span class="td-badge active">Active</span></div>
+          <div class="admin-hotel-item"><div><div class="admin-hotel-name">Mountain View Lodge</div><div class="admin-hotel-city">Denver, CO</div></div><span class="td-badge active">Active</span></div>
+          <div class="admin-hotel-item"><div><div class="admin-hotel-name">City Center Hotel</div><div class="admin-hotel-city">New York, NY</div></div><span class="td-badge pending">Pending</span></div>
+        </div>
+        <div class="admin-panel">
+          <div class="admin-panel-title">Recent Hotels Added</div>
+          <div class="admin-stat-item"><div><div class="admin-stat-label">New registrations</div><div class="admin-stat-sub">Last 7 days</div></div><div class="admin-stat-val">148</div></div>
+          <div class="admin-stat-item"><div><div class="admin-stat-label">Active Booking</div><div class="admin-stat-sub">This month</div></div><div class="admin-stat-val">3.492</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: ADMIN MANAGE HOTELS
+══════════════════════════════════════════ -->
+<div id="adminHotelsPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Admin</div>
+      <div class="snav">
+        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn active" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
+        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="table-card">
+        <div class="table-card-head">
+          <span class="table-card-title">Manage Hotels</span>
+          <button class="btn-add">+ Add Hotel</button>
+        </div>
+        <table>
+          <thead><tr><th>Hotel Name</th><th>Location</th><th>Rooms</th><th>Status</th><th>Actions</th></tr></thead>
+          <tbody>
+            <tr><td>Grand Plaza Hotel &amp; Spa</td><td><span class="td-loc">📍 Los Angeles, CA</span></td><td>120</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+            <tr><td>Sunset Resort &amp; Spa</td><td><span class="td-loc">📍 Miami, FL</span></td><td>85</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+            <tr><td>Mountain View Lodge</td><td><span class="td-loc">📍 Denver, CO</span></td><td>65</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+            <tr><td>City Center Hotel</td><td><span class="td-loc">📍 New York, NY</span></td><td>95</td><td><span class="td-badge pending">Pending</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+            <tr><td>Beachfront Paradise</td><td><span class="td-loc">📍 San Diego, CA</span></td><td>78</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  PAGE: ADMIN MANAGE USERS
+══════════════════════════════════════════ -->
+<div id="adminUsersPage" class="page dash-page">
+  <div class="dash-layout" style="width:100%">
+    <div class="dash-sidebar">
+      <div class="dash-sidebar-title">Admin</div>
+      <div class="snav">
+        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
+        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
+        <button class="snav-btn active" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+      </div>
+    </div>
+    <div class="dash-main">
+      <div class="dash-main-title">Manage Users</div>
+      <div class="users-layout">
+        <div class="users-card">
+          <div class="users-card-top">
+            <span class="users-card-title">All Users</span>
+            <select class="role-filter-sel"><option>All Roles</option><option>Admin</option><option>Hotel Manager</option><option>User</option></select>
+          </div>
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Last Activity</th></tr></thead>
+            <tbody>
+              <tr><td><strong>Sarah Johnson</strong><br><small style="color:var(--muted)">sarah.j@email.com</small></td><td style="color:var(--muted)">Admin</td><td>2 hours ago</td></tr>
+              <tr><td><strong>Michael Chen</strong><br><small style="color:var(--muted)">michael.c@email.com</small></td><td style="color:var(--muted)">Hotel Manager</td><td>5 hours ago</td></tr>
+              <tr><td><strong>Emma Wilson</strong><br><small style="color:var(--muted)">emma.w@email.com</small></td><td style="color:var(--muted)">Hotel Manager</td><td>1 day ago</td></tr>
+              <tr><td><strong>David Martinez</strong><br><small style="color:var(--muted)">david.m@email.com</small></td><td style="color:var(--muted)">User</td><td>3 day ago</td></tr>
+              <tr><td><strong>Lisa Anderson</strong><br><small style="color:var(--muted)">lisa.a@email.com</small></td><td style="color:var(--muted)">User</td><td>1 week ago</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="role-ctrl">
+          <div class="role-ctrl-title">🛡 Role Access Control</div>
+          <div class="role-ctrl-lbl">Role</div>
+          <select class="role-ctrl-sel"><option>Hotel Manager</option><option>Admin</option><option>User</option></select>
+          <div class="perms-heading">Permissions</div>
+          <div class="perm-row"><span>View Dashboard</span><label class="toggle-wrap"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-knob"></div></label></div>
+          <div class="perm-row"><span>Manage Bookings</span><label class="toggle-wrap"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-knob"></div></label></div>
+          <div class="perm-row"><span>Edit Hotel Info</span><label class="toggle-wrap"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-knob"></div></label></div>
+          <div class="perm-row"><span>Manage Users</span><label class="toggle-wrap"><input type="checkbox"><div class="toggle-track"></div><div class="toggle-knob"></div></label></div>
+          <div class="perm-row"><span>View Reports</span><label class="toggle-wrap"><input type="checkbox" checked><div class="toggle-track"></div><div class="toggle-knob"></div></label></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+  CHATBOT PANEL (global overlay)
+══════════════════════════════════════════ -->
+<div class="chatbot-panel" id="chatbotPanel">
+  <div class="chat-head">
+    <div class="chat-head-avatar">🤖</div>
+    <div>
+      <div class="chat-head-name">Chat Bot</div>
+      <div class="chat-head-status">● Online</div>
+    </div>
+    <button class="chat-close" onclick="toggleChatbot()">−</button>
+  </div>
+  <div class="chat-msgs" id="chatMsgs">
+    <div class="chat-msg bot">Quickly find great hotel deals for your trip 🌍<br>User friendly, flexible dates, easy filters and carefully selected hotel booking options.</div>
+    <div class="chat-msg user">Show me available hotels and list complete details like price per night + guest reviews + free cancellation options please</div>
+  </div>
+  <div class="chat-sugs">
+    <button class="chat-sug" onclick="chatSuggest(this)">📍 Which hotels are nearby?</button>
+    <button class="chat-sug" onclick="chatSuggest(this)">💰 Pricing</button>
+    <button class="chat-sug" onclick="chatSuggest(this)">❓ FAQs</button>
+  </div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Type your message here..." onkeydown="if(event.key==='Enter')sendChatMsg()">
+    <button class="chat-send" onclick="sendChatMsg()">➤</button>
+  </div>
+</div>
 
 <script src="/static/script.js"></script>
 </body>
