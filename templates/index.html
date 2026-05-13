@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hotel Reservation System</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<nav>
+    <h2>Hotel Reservation System</h2>
+    <button onclick="logout()">Logout</button>
+</nav>
+
+<section id="homePage" class="page active">
+    <h1>Welcome</h1>
+    <p>Hotel reservation system demo.</p>
+    <button onclick="showPage('loginPage')">Login</button>
+</section>
+
+<section id="loginPage" class="page">
+    <h1>Login</h1>
+
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPassword" placeholder="Password">
+
+    <button onclick="login()">Login</button>
+
+    <p id="loginMessage"></p>
+</section>
+
+<section id="twofaPage" class="page">
+    <h1>2FA Verification</h1>
+
+    <p>Check terminal for test code.</p>
+
+    <input type="text" id="twofaCode" placeholder="6 digit code">
+
+    <button onclick="verify2FA()">Verify</button>
+
+    <p id="twofaMessage"></p>
+</section>
+
+<section id="customerPage" class="page">
+    <h1>Customer Dashboard</h1>
+
+    <button onclick="loadHotels()">View Hotels</button>
+
+    <div id="customerHotels"></div>
+</section>
+
+<section id="managerPage" class="page">
+    <h1>Hotel Manager Dashboard</h1>
+
+    <p>Manager can manage assigned hotels and rooms here.</p>
+
+    <button onclick="loadHotels()">View Hotels</button>
+
+    <div id="managerHotels"></div>
+</section>
+
+<section id="adminPage" class="page">
+    <h1>Admin Dashboard</h1>
+
+    <p>Admin can manage all hotels, rooms, users, and reservations.</p>
+
+    <button onclick="loadHotels()">View All Hotels</button>
+
+    <div id="adminHotels"></div>
+</section>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
