@@ -1,86 +1,130 @@
-CREATE DATABASE IF NOT EXISTS hotel_reservation;
-USE hotel_reservation;
+-- MySQL dump 10.13  Distrib 9.6.0, for macos26.3 (arm64)
+--
+-- Host: localhost    Database: hotel_reservation
+-- ------------------------------------------------------
+-- Server version	9.6.0
 
-DROP TABLE IF EXISTS reservations;
-DROP TABLE IF EXISTS rooms;
-DROP TABLE IF EXISTS hotels;
-DROP TABLE IF EXISTS users;
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!50503 SET NAMES utf8mb4 */;
+/*!40103 SET @OLD_TIME_ZONE=@@TIME_ZONE */;
+/*!40103 SET TIME_ZONE='+00:00' */;
+/*!40014 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0 */;
+/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
+/*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
+/*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+SET @MYSQLDUMP_TEMP_LOG_BIN = @@SESSION.SQL_LOG_BIN;
+SET @@SESSION.SQL_LOG_BIN= 0;
 
-CREATE TABLE users (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,
-  phone VARCHAR(30),
-  role ENUM('USER', 'ADMIN', 'HOTEL_MANAGER') DEFAULT 'USER',
-  two_factor_code VARCHAR(6),
-  two_factor_expires DATETIME,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+--
+-- GTID state at the beginning of the backup 
+--
 
-CREATE TABLE hotels (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  manager_id INT,
-  hotel_name VARCHAR(160) NOT NULL,
-  city VARCHAR(120) NOT NULL,
-  district VARCHAR(120),
-  address VARCHAR(255),
-  description TEXT,
-  score DECIMAL(3,1) DEFAULT 9.0,
-  label VARCHAR(40) DEFAULT 'Excellent',
-  reviews VARCHAR(60) DEFAULT '100 reviews',
-  price VARCHAR(60) DEFAULT 'Price from EUR 250',
-  img VARCHAR(500),
-  status ENUM('ACTIVE', 'INACTIVE', 'PENDING') DEFAULT 'ACTIVE',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (manager_id) REFERENCES users(id)
-);
+SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '02b314ea-4ebe-11f1-9e45-db860ba31479:1-10';
 
-CREATE TABLE rooms (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  hotel_id INT NOT NULL,
-  room_number VARCHAR(20),
-  room_type VARCHAR(80) NOT NULL,
-  capacity INT NOT NULL,
-  price_per_night DECIMAL(10,2) NOT NULL,
-  total_rooms INT DEFAULT 1,
-  description TEXT,
-  status ENUM('ACTIVE', 'INACTIVE') DEFAULT 'ACTIVE',
-  FOREIGN KEY (hotel_id) REFERENCES hotels(id)
-);
+--
+-- Table structure for table `reservations`
+--
 
-CREATE TABLE reservations (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  hotel_id INT NOT NULL,
-  room_id INT NOT NULL,
-  check_in_date DATE NOT NULL,
-  check_out_date DATE NOT NULL,
-  guest_count INT NOT NULL,
-  total_price DECIMAL(10,2),
-  status ENUM('PENDING', 'CONFIRMED', 'CANCELLED') DEFAULT 'PENDING',
-  reservation_source ENUM('MANUAL', 'CHATBOT') DEFAULT 'MANUAL',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id),
-  FOREIGN KEY (hotel_id) REFERENCES hotels(id),
-  FOREIGN KEY (room_id) REFERENCES rooms(id)
-);
+DROP TABLE IF EXISTS `reservations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `reservations` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `user_id` int DEFAULT NULL,
+  `room_id` int DEFAULT NULL,
+  `check_in_date` date NOT NULL,
+  `check_out_date` date NOT NULL,
+  `guest_count` int NOT NULL,
+  `total_price` decimal(10,2) DEFAULT NULL,
+  `status` enum('CONFIRMED','CANCELLED') DEFAULT 'CONFIRMED',
+  `reservation_source` enum('MANUAL','CHATBOT') DEFAULT 'MANUAL',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `room_id` (`room_id`),
+  CONSTRAINT `reservations_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`),
+  CONSTRAINT `reservations_ibfk_2` FOREIGN KEY (`room_id`) REFERENCES `rooms` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
 
-INSERT INTO users (id, name, email, password, phone, role)
-VALUES
-(1, 'Test User', 'test@test.com', 'scrypt:32768:8:1$Gw6S3vLozbXDVqSq$ff053f8a2bbd8690d1652de1e80707462e6bda8707bf1bdd7d59a99f7c033d1524ca384e38374a726ca7acdabc01bea294ef053978cfd12fed7b6b597f05e289', '+905551112233', 'USER'),
-(2, 'Admin User', 'admin@hotel.com', 'scrypt:32768:8:1$rqkSnC2A5kuRoTHf$0d9ed0184d671d47de44ba21ed25cccd6a232ea74f3929d9bfe31e2739e9fc4748f3d355d1659f4355455aa5281ce8d8d3f5de2d3a4dca81c44312c1e3ad4048', '+905551112244', 'ADMIN'),
-(3, 'Hotel Manager', 'manager@hotel.com', 'scrypt:32768:8:1$KQKrJA9MEs2TVIcl$d988e656a98f0c531c311b59a616745dc82a716801250c844ccdbff7838a40d66b6c61f0be7f35d0a7538f85ad60e6969e498aac56470ae5f694aefce1644dfb', '+905551112255', 'HOTEL_MANAGER');
+--
+-- Dumping data for table `reservations`
+--
 
-INSERT INTO hotels (id, manager_id, hotel_name, city, district, address, description, score, label, reviews, price, img, status)
-VALUES
-(1, 3, 'The Landmark Nicosia - Autograph Collection', 'Lefkosa', 'Merkez', 'Lefkosa, Cyprus', 'Luxury city hotel in Cyprus.', 9.4, 'Excellent', '54 reviews', 'Price from EUR 303', 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=70', 'ACTIVE'),
-(2, 3, 'Merit Park Hotel - Casino & Spa', 'Girne', 'Karaoglanoglu', 'Girne, Cyprus', 'Casino and spa resort hotel.', 9.0, 'Excellent', '491 reviews', 'Price from EUR 748', 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=70', 'ACTIVE'),
-(3, 3, 'Cratos Premium Hotel - Casino & Spa', 'Girne', 'Catalkoy', 'Girne, Cyprus', 'Premium seaside resort.', 9.0, 'Excellent', '413 reviews', 'Starting from EUR 760', 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=400&q=70', 'ACTIVE'),
-(4, 3, 'Salamis Bay Conti Hotel', 'Famagusta', 'Yeni Bogazici', 'Famagusta, Cyprus', 'Beachfront resort hotel.', 8.7, 'Good', '2,169 reviews', 'Starting from EUR 292', 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=400&q=70', 'ACTIVE');
+LOCK TABLES `reservations` WRITE;
+/*!40000 ALTER TABLE `reservations` DISABLE KEYS */;
+/*!40000 ALTER TABLE `reservations` ENABLE KEYS */;
+UNLOCK TABLES;
 
-INSERT INTO rooms (id, hotel_id, room_number, room_type, capacity, price_per_night, total_rooms, description, status)
-VALUES
-(1, 1, '101', 'Standard', 2, 1500.00, 10, 'Standard room for 2 guests', 'ACTIVE'),
-(2, 1, '102', 'Deluxe', 3, 2500.00, 6, 'Deluxe room for 3 guests', 'ACTIVE'),
-(3, 2, '201', 'Suite', 4, 4000.00, 4, 'Suite room for 4 guests', 'ACTIVE');
+--
+-- Table structure for table `rooms`
+--
+
+DROP TABLE IF EXISTS `rooms`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `rooms` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `room_number` varchar(20) NOT NULL,
+  `room_type` varchar(50) NOT NULL,
+  `capacity` int NOT NULL,
+  `price_per_night` decimal(10,2) NOT NULL,
+  `description` text,
+  `status` enum('ACTIVE','INACTIVE') DEFAULT 'ACTIVE',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `rooms`
+--
+
+LOCK TABLES `rooms` WRITE;
+/*!40000 ALTER TABLE `rooms` DISABLE KEYS */;
+INSERT INTO `rooms` VALUES (1,'101','Standard',2,1500.00,'Standard room for 2 guests','ACTIVE'),(2,'102','Deluxe',3,2500.00,'Deluxe room for 3 guests','ACTIVE'),(3,'201','Suite',4,4000.00,'Suite room for 4 guests','ACTIVE');
+/*!40000 ALTER TABLE `rooms` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `users`
+--
+
+DROP TABLE IF EXISTS `users`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `users` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `role` enum('USER','ADMIN') DEFAULT 'USER',
+  `two_factor_code` varchar(6) DEFAULT NULL,
+  `two_factor_expires` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `users`
+--
+
+LOCK TABLES `users` WRITE;
+/*!40000 ALTER TABLE `users` DISABLE KEYS */;
+INSERT INTO `users` VALUES (1,'Test User','test@test.com','123456','USER','296442','2026-05-13 15:03:49');
+/*!40000 ALTER TABLE `users` ENABLE KEYS */;
+UNLOCK TABLES;
+SET @@SESSION.SQL_LOG_BIN = @MYSQLDUMP_TEMP_LOG_BIN;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
+
+/*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
+/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
+/*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
+/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
+
+-- Dump completed on 2026-05-13 15:06:45
