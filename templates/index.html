@@ -4,33 +4,181 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Book Hotel</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@0.438.0/dist/umd/lucide.min.js"></script>
+<link rel="stylesheet" href="/static/style.css?v=3">
+<script>window.__buildVer=3;</script>
 </head>
 <body>
 <div id="toastContainer" style="position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
-
 <div id="mainMenuPage" class="page active">
-  <div class="menu-shell">
-    <div class="menu-hero">
-      <div class="menu-copy">
-        <div class="menu-kicker">Book Hotel</div>
-        <h1>Find your next stay, manage every booking.</h1>
-        <p>Booking.com style hotel search, reservation flow, 2FA security, customer accounts, manager tools, and admin control panel in one local system.</p>
-        <div class="menu-actions">
-          <button class="menu-btn primary" onclick="showPage('loginPage')">Customer Login</button>
-          <button class="menu-btn" onclick="showPage('registerPage')">Register</button>
-          <button class="menu-btn dark" onclick="showPage('adminLoginPage')">Admin Login</button>
+
+  <!-- ── LANDING NAVBAR ── -->
+  <nav class="lnav">
+    <span class="lnav-logo"><i data-lucide="building-2" class="logo-ico"></i> BookHotel</span>
+    <div class="lnav-links">
+      <a href="#landing-hotels">Hotels</a>
+      <a href="#landing-why">Why Us</a>
+    </div>
+    <div class="lnav-right">
+      <button class="lnav-signin" onclick="showPage('loginPage')">Sign In</button>
+      <button class="lnav-register" onclick="showPage('registerPage')">Register Free</button>
+      <button class="lnav-admin" onclick="showPage('adminLoginPage')">Staff</button>
+    </div>
+  </nav>
+
+  <!-- ── HERO ── -->
+  <div class="lhero">
+    <img class="lhero-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=85" alt="Luxury hotel">
+    <div class="lhero-overlay"></div>
+    <div class="lhero-content">
+      <div class="lhero-badge">Northern Cyprus · Premium Hotels</div>
+      <h1 class="lhero-title">Where Every Stay<br>Becomes a Memory</h1>
+      <p class="lhero-sub">Book from handpicked luxury hotels across Cyprus — best prices, no hidden fees.</p>
+
+      <!-- Search bar -->
+      <div class="lsearch">
+        <div class="lsearch-field" style="flex:1.6">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Destination</label>
+          <input type="text" id="ldestInput" placeholder="Where are you going?" autocomplete="off">
         </div>
+        <div class="lsearch-divider"></div>
+        <div class="lsearch-field">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-in</label>
+          <div class="dp-trigger" onclick="openDp('lcheckin','lcheckout')"><span class="dp-val muted" id="lcheckin_d">Add date</span></div>
+          <input type="hidden" id="lcheckin">
+        </div>
+        <div class="lsearch-divider"></div>
+        <div class="lsearch-field">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-out</label>
+          <div class="dp-trigger" onclick="openDp('lcheckout','lcheckin')"><span class="dp-val muted" id="lcheckout_d">Add date</span></div>
+          <input type="hidden" id="lcheckout">
+        </div>
+        <div class="lsearch-divider"></div>
+        <div class="lsearch-field" style="flex:.8;position:relative">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Guests</label>
+          <div id="lguestDisplay" class="dp-trigger" onclick="toggleLGuestPicker()" style="color:var(--muted)">Add guests</div>
+          <div id="lguestPicker" style="display:none;position:fixed;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:18px;width:240px;z-index:2000">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:600">Guests</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <button onclick="changeLGuest('guests',-1)" class="picker-btn">−</button>
+                <span id="lg_guests" style="font-size:15px;font-weight:700;min-width:18px;text-align:center">1</span>
+                <button onclick="changeLGuest('guests',1)" class="picker-btn">+</button>
+              </div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+              <div style="font-size:13px;font-weight:600">Rooms</div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <button onclick="changeLGuest('rooms',-1)" class="picker-btn">−</button>
+                <span id="lg_rooms" style="font-size:15px;font-weight:700;min-width:18px;text-align:center">1</span>
+                <button onclick="changeLGuest('rooms',1)" class="picker-btn">+</button>
+              </div>
+            </div>
+            <button onclick="toggleLGuestPicker()" style="width:100%;padding:9px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Done</button>
+          </div>
+        </div>
+        <button class="lsearch-btn" onclick="doLandingSearch()">Search</button>
       </div>
-      <div class="menu-preview">
-        <img src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=900&q=80" alt="Luxury hotel">
-        <div class="menu-float-card">
-          <span>Live local demo</span>
-          <strong>2FA enabled</strong>
-        </div>
+
+      <!-- Quick filters -->
+      <div class="lhero-filters">
+        <button class="lfilter-chip" onclick="quickFilter('Beach')">Beachfront</button>
+        <button class="lfilter-chip" onclick="quickFilter('Pool')">Pool</button>
+        <button class="lfilter-chip" onclick="quickFilter('Casino')">Casino</button>
+        <button class="lfilter-chip" onclick="quickFilter('Spa')">Spa</button>
+        <button class="lfilter-chip" onclick="quickFilter('Kids')">Family</button>
       </div>
     </div>
   </div>
+
+  <!-- ── STATS ── -->
+  <div class="lstats">
+    <div class="lstat"><span class="lstat-num">50+</span><span class="lstat-lbl">Premium Hotels</span></div>
+    <div class="lstat-div"></div>
+    <div class="lstat"><span class="lstat-num">5</span><span class="lstat-lbl">Destinations</span></div>
+    <div class="lstat-div"></div>
+    <div class="lstat"><span class="lstat-num">10K+</span><span class="lstat-lbl">Happy Guests</span></div>
+    <div class="lstat-div"></div>
+    <div class="lstat"><span class="lstat-num">24/7</span><span class="lstat-lbl">Guest Support</span></div>
+  </div>
+
+  <!-- ── FEATURED HOTELS ── -->
+  <section class="lsection" id="landing-hotels">
+    <div class="lsection-head">
+      <div>
+        <div class="lsection-badge">Handpicked for you</div>
+        <h2 class="lsection-title">Top Hotels in Cyprus</h2>
+      </div>
+      <button class="lview-all" onclick="doLandingSearch()">View All Hotels →</button>
+    </div>
+    <div class="lhotels-grid" id="landingHotelsGrid">
+      <div style="text-align:center;padding:60px;color:var(--muted);grid-column:1/-1">Loading hotels...</div>
+    </div>
+  </section>
+
+  <!-- ── HOW IT WORKS ── -->
+  <section class="lwhy" id="landing-why">
+    <div class="lwhy-head">
+      <div class="lsection-badge">Simple &amp; Fast</div>
+      <h2 class="lsection-title">Book in 3 Easy Steps</h2>
+      <p class="lwhy-sub">From search to confirmation in minutes — no hidden fees, no complications.</p>
+    </div>
+    <div class="lwhy-grid">
+      <div class="lwhy-card">
+        <div class="lwhy-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+        <div class="lwhy-num">01</div>
+        <div class="lwhy-name">Search &amp; Compare</div>
+        <div class="lwhy-desc">Browse 50+ handpicked hotels across Northern Cyprus. Filter by location, price, star rating, and amenities to find your perfect match.</div>
+      </div>
+      <div class="lwhy-connector"></div>
+      <div class="lwhy-card">
+        <div class="lwhy-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+        <div class="lwhy-num">02</div>
+        <div class="lwhy-name">Book Securely</div>
+        <div class="lwhy-desc">Select your room and dates, complete guest details, and pay safely. Every booking is protected by 2FA verification and encrypted payments.</div>
+      </div>
+      <div class="lwhy-connector"></div>
+      <div class="lwhy-card">
+        <div class="lwhy-icon"><svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg></div>
+        <div class="lwhy-num">03</div>
+        <div class="lwhy-name">Enjoy Your Stay</div>
+        <div class="lwhy-desc">Receive instant confirmation, manage your booking anytime from your account, and experience the finest hospitality Northern Cyprus has to offer.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FOOTER ── -->
+  <footer class="lfooter">
+    <div class="lfooter-inner">
+      <div class="lfooter-brand">
+        <div class="lfooter-logo">BookHotel</div>
+        <p class="lfooter-desc">Your gateway to the finest hotels in Cyprus. Simple booking, unforgettable stays.</p>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Company</div>
+        <a href="#">About Us</a>
+        <a href="#">Careers</a>
+        <a href="#">Press</a>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Support</div>
+        <a href="#">Help Center</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Cancellation Policy</a>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Account</div>
+        <a href="#" onclick="showPage('loginPage')">Sign In</a>
+        <a href="#" onclick="showPage('registerPage')">Register</a>
+        <a href="#" onclick="showPage('adminLoginPage')">Staff Login</a>
+      </div>
+    </div>
+    <div class="lfooter-bottom">© 2026 BookHotel. All rights reserved. · Cyprus Hotel Reservation System</div>
+  </footer>
+
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -40,7 +188,7 @@
   <div class="auth-wrap">
     <div class="auth-bar">Register</div>
     <div class="auth-body">
-      <div class="auth-card">
+      <form class="auth-card" onsubmit="submitRegister(event)">
         <h1>Create Account</h1>
         <p class="auth-sub">Register securely with 2FA verification.</p>
         <div class="field">
@@ -61,11 +209,11 @@
         <div class="field">
           <input type="tel" id="regPhone" placeholder="Phone Number">
         </div>
-        <button class="btn-primary" onclick="submitRegister()">Create Account</button>
+        <button class="btn-primary" type="submit">Create Account</button>
         <div class="auth-switch">Have an account? <a href="#" onclick="showPage('loginPage')">Sign In</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
         <div class="auth-foot">2FA code will be sent by email or SMS.</div>
-      </div>
+      </form>
     </div>
   </div>
 </div>
@@ -77,7 +225,7 @@
   <div class="auth-wrap">
     <div class="auth-bar">Log In</div>
     <div class="auth-body">
-      <div class="auth-card">
+      <form class="auth-card" onsubmit="submitLogin(event)">
         <h1>Sign In</h1>
         <p class="auth-sub">Access your account securely with 2FA verification.</p>
         <div class="field">
@@ -88,11 +236,11 @@
           <div class="ferr" id="loginErr">Invalid email or password!</div>
           <a href="#" class="forgot">Forgot Password?</a>
         </div>
-        <button class="btn-primary" onclick="submitLogin()">Sign In</button>
+        <button class="btn-primary" type="submit">Sign In</button>
         <div class="auth-switch">Don't have an account? <a href="#" onclick="showPage('registerPage')">Sign Up</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
         <div class="auth-foot">2FA code will be sent by email or SMS.</div>
-      </div>
+      </form>
     </div>
   </div>
 </div>
@@ -102,24 +250,23 @@
 ══════════════════════════════════════════ -->
 <div id="adminLoginPage" class="page">
   <div class="auth-wrap">
-    <div class="auth-bar">Admin Access</div>
     <div class="auth-body">
-      <div class="auth-card admin-auth-card">
-        <h1>Admin Login</h1>
-        <p class="auth-sub">Restricted dashboard access with 2FA verification.</p>
+      <form class="auth-card" onsubmit="submitAdminLogin(event)">
+        <h1>Staff Login</h1>
+        <p class="auth-sub">For Admin &amp; Hotel Manager accounts. Secured with 2FA verification.</p>
         <div class="field">
-          <input type="email" id="adminEmail" placeholder="Admin e-mail">
+          <input type="email" id="adminEmail" placeholder="E-mail">
         </div>
         <div class="field">
           <input type="password" id="adminPassword" placeholder="Password">
           <div class="ferr" id="adminLoginErr">Invalid admin credentials or role.</div>
         </div>
-        <button class="btn-primary" onclick="submitAdminLogin()">Enter Admin Panel</button>
-        <button class="btn-primary" style="background:var(--text);margin-top:8px" onclick="showPage('staffRegisterPage')">Create Staff Account</button>
+        <button class="btn-primary" type="submit">Enter Staff Panel</button>
+        <button class="btn-primary" type="button" style="background:var(--text);margin-top:8px" onclick="showPage('staffRegisterPage')">Create Staff Account</button>
         <div class="auth-switch"><a href="#" onclick="showPage('loginPage')">Customer Login</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
         <div class="auth-foot">Admin / Hotel Manager accounts only.</div>
-      </div>
+      </form>
     </div>
   </div>
 </div>
@@ -128,17 +275,17 @@
   <div class="auth-wrap">
     <div class="auth-bar">2FA Verification</div>
     <div class="auth-body">
-      <div class="auth-card">
+      <form class="auth-card" onsubmit="verify2FA(event)">
         <h1>Verify Your Account</h1>
         <p class="twofa-sub" id="twofaMessage">We sent a 6-digit verification code to your email or phone.</p>
         <div class="field">
           <input type="text" id="twofaCode" placeholder="Enter the 6-digit code" maxlength="6">
           <div class="ferr" id="twofaErr">Invalid or expired code</div>
         </div>
-        <button class="btn-primary" onclick="verify2FA()">Verify Code</button>
+        <button class="btn-primary" type="submit">Verify Code</button>
         <div class="twofa-resend">Didn't receive the code? <a href="#" onclick="resendCode(event)">Resend</a></div>
         <div class="twofa-timer">Code expires in <b id="twofaTimer">01:30</b></div>
-      </div>
+      </form>
     </div>
   </div>
 </div>
@@ -152,15 +299,11 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links">
       <a href="#" onclick="showPage('homePage')">Home</a>
-      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">❤️ Wishlist</a>
+      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">Wishlist</a>
       <a href="#" onclick="showPage('myReservationsPage');loadMyReservations()">My Reservations</a>
-      <a href="#" onclick="showPage('profilePage');loadProfile()">👤 Profile</a>
+      <a href="#" onclick="showPage('profilePage');loadProfile()">Profile</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
@@ -168,28 +311,38 @@
   <div class="home-wrap">
     <!-- Hero -->
     <div class="home-hero">
-      <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1200&q=80" alt="Hotel pool">
+      <img src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1400&q=85" alt="Hotel pool">
+      <div class="home-hero-content">
+        <div class="home-hero-badge">
+          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Northern Cyprus #1 Booking Platform
+        </div>
+        <h1 class="home-hero-title">Find Your Perfect Stay</h1>
+        <p class="home-hero-sub">Discover luxury hotels across Cyprus — best prices guaranteed</p>
+      </div>
     </div>
 
     <!-- Search Bar -->
     <div class="search-wrap">
       <div class="search-bar">
         <div class="sbar-field" style="flex:1.4">
-          <label>✈ Destination</label>
-          <input type="text" id="searchDest" placeholder="Where are you going?">
+          <label>Destination</label>
+          <input type="text" id="searchDest" placeholder="Where are you going?" autocomplete="off">
         </div>
         <div class="sbar-field">
-          <label>📅 Check-in</label>
-          <input type="date" id="searchCheckin">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-in</label>
+          <div class="dp-trigger" onclick="openDp('searchCheckin','searchCheckout')"><span class="dp-val muted" id="searchCheckin_d">Add date</span></div>
+          <input type="hidden" id="searchCheckin">
         </div>
         <div class="sbar-field">
-          <label>📅 Check-out</label>
-          <input type="date" id="searchCheckout">
+          <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-out</label>
+          <div class="dp-trigger" onclick="openDp('searchCheckout','searchCheckin')"><span class="dp-val muted" id="searchCheckout_d">Add date</span></div>
+          <input type="hidden" id="searchCheckout">
         </div>
         <div class="sbar-field" style="position:relative">
-          <label id="guestsLabel">👥 Guests &amp; Rooms</label>
-          <div id="guestDisplay" onclick="toggleGuestPicker()" style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">2 adults · 1 room</div>
-          <div id="guestPicker" style="display:none;position:absolute;top:72px;left:0;background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:18px;width:260px;z-index:500">
+          <label id="guestsLabel"><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Guests</label>
+          <div id="guestDisplay" onclick="toggleGuestPicker()" style="font-size:12px;color:var(--muted);cursor:pointer;user-select:none">Add guests</div>
+          <div id="guestPicker" style="display:none;position:fixed;background:var(--white);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:18px;width:260px;z-index:2000">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
               <div><div id="adultsLabel" style="font-size:13px;font-weight:600">Adults</div><div id="adultsAgeLabel" style="font-size:11px;color:var(--muted)">Age 18+</div></div>
               <div style="display:flex;align-items:center;gap:12px">
@@ -214,26 +367,62 @@
                 <button onclick="changeGuests('rooms',1)" style="width:30px;height:30px;border-radius:50%;border:1.5px solid var(--border);background:var(--white);font-size:18px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center">+</button>
               </div>
             </div>
-            <button id="doneBtn" onclick="toggleGuestPicker()" style="width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Done ✓</button>
+            <button id="doneBtn" onclick="toggleGuestPicker()" style="width:100%;padding:10px;background:var(--green);color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">Done</button>
           </div>
         </div>
-        <button class="sbar-search" onclick="goSearch()">🔍</button>
+        <button class="sbar-search" onclick="goSearch()"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></button>
       </div>
     </div>
 
+    <!-- Category Filters -->
+    <div class="home-cats">
+      <button class="cat-chip active" onclick="filterByCategory('all',this)">All</button>
+      <button class="cat-chip" onclick="filterByCategory('luxury',this)">Luxury</button>
+      <button class="cat-chip" onclick="filterByCategory('beach',this)">Beachfront</button>
+      <button class="cat-chip" onclick="filterByCategory('casino',this)">Casino</button>
+      <button class="cat-chip" onclick="filterByCategory('spa',this)">Spa &amp; Wellness</button>
+      <button class="cat-chip" onclick="filterByCategory('family',this)">Family</button>
+    </div>
+
     <!-- Hotel Cards -->
-    <h2 class="sec-title">Recommended for you</h2>
+    <div class="sec-head">
+      <h2 class="sec-title" id="secTitle">Recommended for you</h2>
+      <p class="sec-sub">Handpicked luxury hotels in Northern Cyprus</p>
+    </div>
     <div class="hotels-grid" id="hotelsGrid">
       <!-- filled by JS -->
     </div>
 
-    <!-- Pagination -->
-    <div class="pagination">
-      <button class="pg-btn" onclick="changePage(-1)">‹</button>
-      <span id="pageInfo">1 of 4</span>
-      <button class="pg-btn" onclick="changePage(1)">›</button>
-    </div>
   </div>
+
+  <!-- Footer -->
+  <footer class="lfooter">
+    <div class="lfooter-inner">
+      <div class="lfooter-brand">
+        <div class="lfooter-logo">BookHotel</div>
+        <p class="lfooter-desc">Your gateway to the finest hotels in Cyprus. Simple booking, unforgettable stays.</p>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Company</div>
+        <a href="#">About Us</a>
+        <a href="#">Careers</a>
+        <a href="#">Press</a>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Support</div>
+        <a href="#">Help Center</a>
+        <a href="#">Contact Us</a>
+        <a href="#">Cancellation Policy</a>
+      </div>
+      <div class="lfooter-col">
+        <div class="lfooter-col-title">Account</div>
+        <a href="#" onclick="showPage('loginPage')">Sign In</a>
+        <a href="#" onclick="showPage('registerPage')">Register</a>
+        <a href="#" onclick="showPage('adminLoginPage')">Staff Login</a>
+      </div>
+    </div>
+    <div class="lfooter-bottom">© 2026 BookHotel. All rights reserved. · Cyprus Hotel Reservation System</div>
+  </footer>
 </div>
 
 <!-- ══════════════════════════════════════════
@@ -244,14 +433,10 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links">
       <a href="#" onclick="showPage('homePage')">Home</a>
-      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">❤️ Wishlist</a>
+      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">Wishlist</a>
       <a href="#" onclick="showPage('myReservationsPage');loadMyReservations()">My Reservations</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
@@ -263,37 +448,58 @@
 
       <div class="s-lbl">Destination</div>
       <div class="s-inp-wrap">
-        <span class="s-ico">📍</span>
+        <span class="s-ico"><i data-lucide="map-pin"></i></span>
         <input class="s-inp" type="text" id="sDest" placeholder="City or hotel name...">
       </div>
 
       <div class="s-lbl">Check-in</div>
       <div class="s-inp-wrap">
-        <span class="s-ico">📅</span>
-        <input class="s-inp" type="date" id="sCheckin" onchange="dateState.checkin=this.value;updateNightsDisplay()">
+        <span class="s-ico"><i data-lucide="calendar"></i></span>
+        <button class="s-inp s-trigger" type="button" onclick="openDp('sCheckin','sCheckout')"><span class="dp-val muted" id="sCheckin_d">Add date</span></button>
+        <input type="hidden" id="sCheckin">
       </div>
 
       <div class="s-lbl">Check-out</div>
       <div class="s-inp-wrap">
-        <span class="s-ico">📅</span>
-        <input class="s-inp" type="date" id="sCheckout" onchange="dateState.checkout=this.value;updateNightsDisplay()">
+        <span class="s-ico"><i data-lucide="calendar"></i></span>
+        <button class="s-inp s-trigger" type="button" onclick="openDp('sCheckout','sCheckin')"><span class="dp-val muted" id="sCheckout_d">Add date</span></button>
+        <input type="hidden" id="sCheckout">
       </div>
 
       <div class="s-lbl">Guests</div>
       <div class="s-inp-wrap">
-        <span class="s-ico">👥</span>
-        <input class="s-inp" type="text" placeholder="2 adults, 1 room">
+        <span class="s-ico"><i data-lucide="users"></i></span>
+        <button class="s-inp s-trigger" id="sGuestDisplay" type="button" onclick="toggleSearchGuestPicker()">2 adults, 1 room</button>
+        <div id="sGuestPicker" class="s-guest-picker" style="display:none" onclick="event.stopPropagation()">
+          <div class="s-guest-row">
+            <span>Guests</span>
+            <div class="s-guest-controls">
+              <button type="button" onclick="changeSearchGuests('adults',-1)">−</button>
+              <strong id="sAdultsCount">2</strong>
+              <button type="button" onclick="changeSearchGuests('adults',1)">+</button>
+            </div>
+          </div>
+          <div class="s-guest-row">
+            <span>Rooms</span>
+            <div class="s-guest-controls">
+              <button type="button" onclick="changeSearchGuests('rooms',-1)">−</button>
+              <strong id="sRoomsCount">1</strong>
+              <button type="button" onclick="changeSearchGuests('rooms',1)">+</button>
+            </div>
+          </div>
+          <button class="s-guest-done" type="button" onclick="toggleSearchGuestPicker()">Done</button>
+        </div>
       </div>
 
-      <button class="s-search-btn" onclick="doSearch()">🔍 Search</button>
+      <button class="s-search-btn" onclick="doSearch()"><i data-lucide="search"></i> Search</button>
 
       <div class="filter-title">City / Region</div>
-      <label class="rating-item"><input type="radio" name="sCity" value="" checked onchange="doSearch()"> 🌍 All Cyprus</label>
-      <label class="rating-item"><input type="radio" name="sCity" value="Girne" onchange="document.getElementById('sDest').value='Girne';doSearch()"> 🏖 Girne (Kyrenia)</label>
-      <label class="rating-item"><input type="radio" name="sCity" value="Lefkoşa" onchange="document.getElementById('sDest').value='Lefkoşa';doSearch()"> 🏙 Lefkoşa (Nicosia)</label>
-      <label class="rating-item"><input type="radio" name="sCity" value="İskele" onchange="document.getElementById('sDest').value='İskele';doSearch()"> 🏝 İskele</label>
-      <label class="rating-item"><input type="radio" name="sCity" value="Gazimağusa" onchange="document.getElementById('sDest').value='Gazimağusa';doSearch()"> 🏰 Gazimağusa</label>
-      <label class="rating-item"><input type="radio" name="sCity" value="Baf" onchange="document.getElementById('sDest').value='Baf';doSearch()"> 🌊 Baf (Paphos)</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="" checked onchange="doSearch()"> All Cyprus</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="Girne" onchange="document.getElementById('sDest').value='Girne';doSearch()"> Girne (Kyrenia)</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="Lefkoşa" onchange="document.getElementById('sDest').value='Lefkoşa';doSearch()"> Lefkoşa (Nicosia)</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="İskele" onchange="document.getElementById('sDest').value='İskele';doSearch()"> İskele</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="Gazimağusa" onchange="document.getElementById('sDest').value='Gazimağusa';doSearch()"> Gazimağusa</label>
+      <label class="rating-item"><input type="radio" name="sCity" value="Baf" onchange="document.getElementById('sDest').value='Baf';doSearch()"> Baf (Paphos)</label>
 
       <div class="filter-title">Popular Filters</div>
       <label class="filter-item"><input type="checkbox" value="Beach"> Beachfront</label>
@@ -324,12 +530,20 @@
       <div id="searchResultTitle" class="s-result-title">Cyprus Hotels</div>
       <div class="sort-row">
         <span id="nightsDisplay" style="font-size:13px;color:var(--sub)"></span>
-        <select class="sort-sel" id="sSort" onchange="fetchAndRenderSearch()">
-          <option value="score_desc">Highest Rating</option>
-          <option value="price_asc">Price: Low to High</option>
-          <option value="price_desc">Price: High to Low</option>
-          <option value="reviews_desc">Most Reviewed</option>
-        </select>
+        <div class="sort-wrap">
+          <button class="sort-sel" id="sSortBtn" type="button" onclick="toggleSortMenu()">Recommended</button>
+          <input type="hidden" id="sSort" value="recommended">
+          <div class="sort-menu" id="sSortMenu" style="display:none">
+            <button type="button" data-value="recommended" onclick="selectSortOption(this)">Recommended</button>
+            <button type="button" data-value="score_desc" onclick="selectSortOption(this)">Highest Rating</button>
+            <button type="button" data-value="score_asc" onclick="selectSortOption(this)">Lowest Rating</button>
+            <button type="button" data-value="price_asc" onclick="selectSortOption(this)">Price: Low to High</button>
+            <button type="button" data-value="price_desc" onclick="selectSortOption(this)">Price: High to Low</button>
+            <button type="button" data-value="reviews_desc" onclick="selectSortOption(this)">Most Reviewed</button>
+            <button type="button" data-value="popular" onclick="selectSortOption(this)">Most Popular</button>
+            <button type="button" data-value="newest" onclick="selectSortOption(this)">Newest</button>
+          </div>
+        </div>
       </div>
       <div id="searchResults">
         <div style="text-align:center;padding:40px;color:var(--muted)">Enter a destination and click Search.</div>
@@ -346,28 +560,57 @@
   <div class="detail-bar">
     <div class="detail-bar-inner">
       <div class="db-field" style="flex:1.4">
-        <label>✈ Destination</label>
-        <span>The Arkın İskele</span>
+        <label>Destination</label>
+        <input class="db-input" type="text" id="detailDest" value="" autocomplete="off">
       </div>
       <div class="db-field">
-        <label>📅 Check-in</label>
-        <span>14 Oct 26 Wednesday</span>
+        <label><i data-lucide="calendar" class="lbl-ico"></i> Check-in</label>
+        <div class="dp-trigger" onclick="openDp('detailCheckin','detailCheckout')"><span class="dp-val muted" id="detailCheckin_d">Add date</span></div>
+        <input type="hidden" id="detailCheckin">
       </div>
       <div class="db-field">
-        <label>📅 Check-out</label>
-        <span>23 Oct 26 Friday</span>
+        <label><i data-lucide="calendar" class="lbl-ico"></i> Check-out</label>
+        <div class="dp-trigger" onclick="openDp('detailCheckout','detailCheckin')"><span class="dp-val muted" id="detailCheckout_d">Add date</span></div>
+        <input type="hidden" id="detailCheckout">
       </div>
-      <div class="db-field">
-        <label>🛏 Guests &amp; rooms</label>
-        <span>2 adults, 1 room</span>
+      <div class="db-field" style="position:relative">
+        <label>Guests &amp; rooms</label>
+        <button class="db-guest-trigger" id="detailGuestDisplay" onclick="toggleDetailGuestPicker()">2 adults, 1 room</button>
+        <div id="detailGuestPicker" class="detail-guest-picker" style="display:none" onclick="event.stopPropagation()">
+          <div class="detail-guest-row">
+            <span>Adults</span>
+            <div class="detail-guest-controls">
+              <button onclick="changeDetailGuests('adults',-1)">−</button>
+              <strong id="detailAdultsCount">2</strong>
+              <button onclick="changeDetailGuests('adults',1)">+</button>
+            </div>
+          </div>
+          <div class="detail-guest-row">
+            <span>Children</span>
+            <div class="detail-guest-controls">
+              <button onclick="changeDetailGuests('children',-1)">−</button>
+              <strong id="detailChildrenCount">0</strong>
+              <button onclick="changeDetailGuests('children',1)">+</button>
+            </div>
+          </div>
+          <div class="detail-guest-row">
+            <span>Rooms</span>
+            <div class="detail-guest-controls">
+              <button onclick="changeDetailGuests('rooms',-1)">−</button>
+              <strong id="detailRoomsCount">1</strong>
+              <button onclick="changeDetailGuests('rooms',1)">+</button>
+            </div>
+          </div>
+          <button class="detail-guest-done" onclick="toggleDetailGuestPicker()">Done</button>
+        </div>
       </div>
-      <button class="db-search">🔍</button>
+      <button class="db-search" onclick="doDetailSearch()" aria-label="Search"><i data-lucide="search"></i></button>
     </div>
   </div>
 
   <div class="detail-content">
-    <h1 class="detail-hotel-name" id="detailHotelName">The Arkın İskele Hotel</h1>
-    <div class="detail-hotel-loc" id="detailHotelLoc">📍 İskele / Famagusta, Northern Cyprus</div>
+    <h1 class="detail-hotel-name" id="detailHotelName"></h1>
+    <div class="detail-hotel-loc" id="detailHotelLoc"><i data-lucide="map-pin" class="lbl-ico"></i></div>
 
     <!-- Gallery -->
     <div class="detail-gallery">
@@ -391,43 +634,36 @@
         <button class="d-tab">Facilities</button>
       </div>
       <div class="detail-price-action">
-        <span class="detail-price-label" id="detailHotelPrice">118.800₺</span>
-        <button class="btn-view-rooms" onclick="showPage('bookingPage')">View Rooms</button>
+        <span class="detail-price-label" id="detailHotelPrice"></span>
+        <button class="btn-view-rooms" onclick="openBookingPage()">View Rooms</button>
       </div>
     </div>
 
     <!-- Detail grid -->
     <div class="detail-grid">
       <div>
-        <p class="detail-desc" id="detailHotelDesc">Located in the Gazimağusa region of Cyprus, The Arkın İskele Hotel offers guests a full and enjoyable holiday experience with its Ultra All-Inclusive concept.</p>
-        <button class="see-more-btn">See More</button>
-        <div class="amenity-tags">
-          <span class="amenity-tag">Honeymoon Friendly</span>
-          <span class="amenity-tag">Beachfront</span>
-          <span class="amenity-tag">Sandy Beach</span>
-          <span class="amenity-tag">Private Beach</span>
-          <span class="amenity-tag">Family Friendly</span>
-          <span class="amenity-tag">Wheelchair Accessible</span>
-        </div>
-        <button class="see-all-btn">See all amenities ›</button>
+        <p class="detail-desc" id="detailHotelDesc"></p>
+        <button class="see-more-btn" id="detailSeeMoreBtn" onclick="toggleDetailDescription()" style="display:none">See More</button>
+        <div class="amenity-tags"></div>
+        <button class="see-all-btn" id="detailSeeAllAmenitiesBtn" onclick="toggleDetailAmenities()" style="display:none">See all amenities ›</button>
         <div class="detail-rating-row">
-          <div class="detail-score-badge" id="detailHotelScore">9.4</div>
+          <div class="detail-score-badge" id="detailHotelScore"></div>
           <div>
             <div class="detail-score-txt">Excellent</div>
           </div>
-          <button class="detail-comments-link">See all comments</button>
+          <button class="detail-comments-link" onclick="toggleAllComments()">See all comments</button>
         </div>
       </div>
 
       <!-- Booking side -->
       <div class="booking-side">
-        <div class="booking-side-title">Select Room 🛏</div>
+        <div class="booking-side-title">Select Room</div>
         <select class="room-sel"><option>2 adults, 1 room</option></select>
-        <div class="booking-side-title">Select Date 📅</div>
+        <div class="booking-side-title">Select Date</div>
         <div class="cal-nav-row">
-          <button class="cal-nav-btn">‹</button>
-          <span class="cal-month-lbl">October 2026</span>
-          <button class="cal-nav-btn">›</button>
+          <button class="cal-nav-btn" onclick="bookingCalNav(-1)">‹</button>
+          <span class="cal-month-lbl" id="bookingCalMonth">Select dates</span>
+          <button class="cal-nav-btn" onclick="bookingCalNav(1)">›</button>
         </div>
         <div class="cal-grid" id="calGrid"></div>
       </div>
@@ -440,12 +676,12 @@
         <img class="room-row-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=300&q=80" alt="Room">
         <div class="room-row-body">
           <div class="room-row-name">Standard Sea View Room</div>
-          <div class="room-row-tag">👥 2 guests · WiFi · AC</div>
+          <div class="room-row-tag">2 guests · WiFi · AC</div>
         </div>
         <div class="room-row-right">
           <div class="room-nights-lbl">per night</div>
           <div class="room-price-main">EUR 280</div>
-          <button class="btn-book-now" onclick="showPage('bookingPage')">Book Now ›</button>
+          <button class="btn-book-now" onclick="openBookingPage()">Book Now ›</button>
         </div>
       </div>
     </div>
@@ -469,10 +705,6 @@
       <a href="#">Reservations</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
@@ -492,9 +724,32 @@
         <div class="bcard-title">Transportation Services</div>
         <div class="bcard-sub">You can add flight tickets and transfer services to your reservation.</div>
         <div class="add-btns">
-          <button class="add-btn">+ Add Flight</button>
-          <button class="add-btn">+ Add Transfer</button>
+          <button class="add-btn" onclick="toggleTransportForm('flight')">+ Add Flight</button>
+          <button class="add-btn" onclick="toggleTransportForm('transfer')">+ Add Transfer</button>
         </div>
+        <div id="flightForm" class="transport-form" style="display:none">
+          <div class="transport-title">Flight Details</div>
+          <div class="form-grid">
+            <input class="form-inp" id="flightNumber" placeholder="Flight number">
+            <input class="form-inp" id="flightAirline" placeholder="Airline">
+            <input class="form-inp" id="flightDate" type="date">
+            <input class="form-inp" id="flightTime" type="time">
+            <input class="form-inp full" id="flightAirport" placeholder="Airport">
+          </div>
+          <button class="mini-action" onclick="saveTransport('flight')">Save Flight</button>
+        </div>
+        <div id="transferForm" class="transport-form" style="display:none">
+          <div class="transport-title">Transfer Details</div>
+          <div class="form-grid">
+            <input class="form-inp" id="transferPickup" placeholder="Pickup location">
+            <input class="form-inp" id="transferDropoff" placeholder="Drop-off location">
+            <input class="form-inp" id="transferDate" type="date">
+            <input class="form-inp" id="transferTime" type="time">
+            <input class="form-inp full" id="transferPassengers" type="number" min="1" placeholder="Passenger count">
+          </div>
+          <button class="mini-action" onclick="saveTransport('transfer')">Save Transfer</button>
+        </div>
+        <div id="transportList" class="transport-list"></div>
       </div>
 
       <!-- Guest Info -->
@@ -514,12 +769,20 @@
             <input class="form-inp full" type="text" placeholder="ID number">
           </div>
         </div>
-        <div class="guest-collapse">
+        <div class="guest-collapse" onclick="toggleAdultAccordion()">
           <div>
             <div class="guest-collapse-title">2. Adult Information</div>
             <div class="guest-sec-badge">(Optional)</div>
           </div>
-          <span>⌄</span>
+          <span id="adultAccordionArrow">⌄</span>
+        </div>
+        <div id="adultAccordionBody" class="guest-section optional-guest" style="display:none">
+          <div class="form-grid">
+            <input class="form-inp" id="adult2Name" placeholder="Full name">
+            <input class="form-inp" id="adult2Email" type="email" placeholder="Email">
+            <input class="form-inp" id="adult2Phone" type="tel" placeholder="Phone number">
+            <input class="form-inp" id="adult2Id" placeholder="ID/passport number">
+          </div>
         </div>
         <div class="extras-checks">
           <label class="extra-chk"><input type="checkbox"> We are a honeymoon couple</label>
@@ -537,11 +800,11 @@
           <div class="order-badge">9.4</div>
           <div class="order-score-txt">Excellent</div>
         </div>
-        <div class="order-hotel-name" id="orderHotelName">The Arkın İskele</div>
-        <div class="order-hotel-loc">📍 İskele / Northern Cyprus</div>
-        <div class="order-dates">14 Oct 26 – 23 Oct 26</div>
-        <div class="order-checkin">📅 Check-in: Wed, Check-out: Fri</div>
-        <div class="order-guests-row">👥 2 Adults</div>
+        <div class="order-hotel-name" id="orderHotelName"></div>
+        <div class="order-hotel-loc" id="orderHotelLoc"><i data-lucide="map-pin" class="lbl-ico"></i></div>
+        <div class="order-dates" id="orderDates">Select dates</div>
+        <div class="order-checkin" id="orderCheckinInfo">Choose check-in and check-out dates</div>
+        <div class="order-guests-row"><i data-lucide="users" class="lbl-ico"></i> 2 Adults</div>
         <div class="order-room-row">
           <img class="order-room-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80" alt="Room">
           <div>
@@ -571,10 +834,6 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links"><a href="#" onclick="showPage('homePage')">Home</a></div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
@@ -607,41 +866,42 @@
         <div class="pay-accordion">
           <div class="pay-acc-head open">
             <span class="pay-acc-title">Bank/Credit Card</span>
-            <div class="pay-logos">
-              <span class="pay-logo">MASTERCARD</span>
-              <span class="pay-logo">VISA</span>
-              <span class="pay-logo">AMEX</span>
-              <span>⌃</span>
-            </div>
+            <div class="pay-logos"><span>⌃</span></div>
           </div>
           <div class="pay-acc-body">
             <div class="pay-tabs">
-              <button class="pay-tab active">💳 Credit Card</button>
-              <button class="pay-tab">💳 Multiple Credit Cards</button>
+              <button class="pay-tab active" id="singleCardTab" onclick="setPaymentTab('single')">Credit Card</button>
+              <button class="pay-tab" id="multiCardTab" onclick="setPaymentTab('multi')">Multiple Credit Cards</button>
             </div>
-            <div class="cc-layout">
+            <div class="cc-layout" id="singleCardPanel">
               <div class="cc-fields">
                 <input class="form-inp" type="text" placeholder="Name on Card" id="ccName" oninput="updateCard()">
                 <input class="form-inp" type="text" placeholder="Card Number" id="ccNum" maxlength="19" oninput="updateCard()">
                 <div style="display:flex;gap:8px">
-                  <input class="form-inp" type="text" placeholder="Expiry Date" id="ccExpiry" style="flex:1" oninput="updateCard()">
-                  <input class="form-inp" type="text" placeholder="CVC/CVV" id="ccCvc" maxlength="3" style="flex:1">
+                  <input class="form-inp" type="text" placeholder="Expiry Date" id="ccExpiry" style="flex:1" onclick="openExpiryPicker('ccExpiry')" oninput="formatExpiryInput(this);updateCard()">
+                  <input class="form-inp" type="text" placeholder="CVC/CVV" id="ccCvc" maxlength="4" style="flex:1" oninput="this.value=this.value.replace(/\D/g,'').slice(0,4);updateCard()">
                 </div>
+                <div id="paymentError" class="payment-error"></div>
               </div>
               <div class="cc-visual">
-                <div class="cc-chip">▣</div>
                 <div class="cc-num" id="cardNumDisplay">0000 0000 0000 0000</div>
                 <div class="cc-meta">
-                  <span>⬛ 1/30</span>
-                  <span>⬛ 123</span>
+                  <span id="cardExpiryDisplay">MM/YY</span>
+                  <span id="cardCvcDisplay">CVV</span>
                 </div>
                 <div class="cc-holder" id="cardHolderDisplay">CARDHOLDER</div>
               </div>
             </div>
+            <div id="multiCardPanel" style="display:none">
+              <div id="multiCardsList"></div>
+              <button class="mini-action" onclick="addMultiCard()">+ Add another card</button>
+              <div id="multiPaymentError" class="payment-error"></div>
+            </div>
             <label class="agree-row">
-              <input type="checkbox">
+              <input type="checkbox" id="agreePayment">
               I have read and accept the Pre-Information Form and the Service Agreement regarding my reservation.
             </label>
+            <div id="expiryPicker" class="expiry-picker" style="display:none" onclick="event.stopPropagation()"></div>
           </div>
         </div>
 
@@ -649,11 +909,7 @@
         <div class="pay-accordion">
           <div class="pay-acc-head">
             <span class="pay-acc-title">Bank Transfer</span>
-            <div class="pay-logos">
-              <span class="pay-logo">DISCOVER</span>
-              <span class="pay-logo">AMEX</span>
-              <span>⌄</span>
-            </div>
+            <div class="pay-logos"><span>⌄</span></div>
           </div>
         </div>
 
@@ -661,12 +917,7 @@
         <div class="pay-accordion">
           <div class="pay-acc-head">
             <span class="pay-acc-title">Installment Payment</span>
-            <div class="pay-logos">
-              <span class="pay-logo">DISCOVER</span>
-              <span class="pay-logo">MASTERCARD</span>
-              <span class="pay-logo">VISA</span>
-              <span>⌄</span>
-            </div>
+            <div class="pay-logos"><span>⌄</span></div>
           </div>
         </div>
       </div>
@@ -679,16 +930,16 @@
           <div class="order-badge">9.4</div>
           <div class="order-score-txt">Excellent</div>
         </div>
-        <div class="order-hotel-name">The Arkın İskele</div>
-        <div class="order-hotel-loc">📍 İskele / Northern Cyprus</div>
-        <div class="order-dates">14 Oct 26 – 23 Oct 26</div>
-        <div class="order-checkin">📅 Check-in: Wed, Check-out: Fri</div>
-        <div class="order-guests-row">👥 2 Adults</div>
+        <div class="order-hotel-name" id="payOrderHotelName"></div>
+        <div class="order-hotel-loc" id="payOrderHotelLoc"><i data-lucide="map-pin" class="lbl-ico"></i></div>
+        <div class="order-dates" id="payOrderDates">Select dates</div>
+        <div class="order-checkin" id="payOrderCheckinInfo">Choose check-in and check-out dates</div>
+        <div class="order-guests-row"><i data-lucide="users" class="lbl-ico"></i> 2 Adults</div>
         <div class="order-room-row">
           <img class="order-room-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80" alt="Room">
           <div>
-            <div class="order-room-name">Standard Sea View Room – UHD</div>
-            <div class="order-room-tag">🏆 Ultra All Inclusive</div>
+            <div class="order-room-name" id="payOrderRoomName">Standard Sea View Room</div>
+            <div class="order-room-tag">Ultra All Inclusive</div>
             <div class="order-room-feats">
               <span class="order-feat">Minibar</span>
               <span class="order-feat">Wake-up Service</span>
@@ -701,13 +952,12 @@
         <div class="price-line">
           <span class="price-lbl">Room Price</span>
           <div>
-            <div class="price-old-val">326.400,00 ₺</div>
-            <span class="price-curr">277.440,00 ₺</span>
+            <span class="price-curr" id="payOrderRoomPrice">EUR —</span>
           </div>
         </div>
         <div class="price-total-line">
           <span class="price-total-lbl">Total Price</span>
-          <span class="price-total-val" id="orderTotalPrice2">277.440,00 ₺</span>
+          <span class="price-total-val" id="orderTotalPrice2">EUR —</span>
         </div>
         <button class="btn-proceed" onclick="completePayment()">Complete Payment →</button>
       </div>
@@ -755,7 +1005,7 @@
         </div>
       </div>
       <div class="confirm-notice">
-        <span class="confirm-notice-ico">✉️</span>
+        <span class="confirm-notice-ico"><i data-lucide="mail"></i></span>
         Booking and payment details have been sent via email and SMS.
       </div>
       <div class="confirm-btns">
@@ -803,7 +1053,7 @@
         </div>
       </div>
       <div class="confirm-notice fail-notice">
-        <span class="confirm-notice-ico">🕐</span>
+        <span class="confirm-notice-ico"><i data-lucide="clock"></i></span>
         Your reservation is not confirmed yet. Your booking progress will be saved for 10 minutes.
       </div>
       <div class="confirm-btns">
@@ -823,10 +1073,10 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Hotel Manager</div>
       <div class="snav">
-        <button class="snav-btn active" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
-        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
-        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico"><i data-lucide="bed"></i></span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico"><i data-lucide="image"></i></span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico"><i data-lucide="bar-chart-2"></i></span> Analytics</button>
       </div>
     </div>
     <div class="dash-main">
@@ -854,10 +1104,10 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Hotel Manager</div>
       <div class="snav">
-        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn active" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
-        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
-        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico"><i data-lucide="bed"></i></span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico"><i data-lucide="image"></i></span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico"><i data-lucide="bar-chart-2"></i></span> Analytics</button>
       </div>
     </div>
     <div class="dash-main">
@@ -867,25 +1117,25 @@
           <div class="rm-card-top"><div><div class="rm-card-name">Deluxe King Suit</div><div class="rm-card-count">5 rooms</div></div><span class="rm-badge avail">Available</span></div>
           <div class="rm-price">$250<span class="per">/night</span></div>
           <img class="rm-img" src="https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80" alt="Room">
-          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+          <div class="rm-actions"><button class="rm-action">Edit</button><button class="rm-action del">Delete</button></div>
         </div>
         <div class="rm-card">
           <div class="rm-card-top"><div><div class="rm-card-name">Standard Double</div><div class="rm-card-count">12 rooms</div></div><span class="rm-badge avail">Available</span></div>
           <div class="rm-price">$120<span class="per">/night</span></div>
           <img class="rm-img" src="https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400&q=80" alt="Room">
-          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+          <div class="rm-actions"><button class="rm-action">Edit</button><button class="rm-action del">Delete</button></div>
         </div>
         <div class="rm-card">
           <div class="rm-card-top"><div><div class="rm-card-name">Executive Suit</div><div class="rm-card-count">3 rooms</div></div><span class="rm-badge unavail">Unavailable</span></div>
           <div class="rm-price">$350<span class="per">/night</span></div>
           <img class="rm-img" src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400&q=80" alt="Room">
-          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+          <div class="rm-actions"><button class="rm-action">Edit</button><button class="rm-action del">Delete</button></div>
         </div>
         <div class="rm-card">
           <div class="rm-card-top"><div><div class="rm-card-name">Premium Ocean View</div><div class="rm-card-count">8 rooms</div></div><span class="rm-badge avail">Available</span></div>
           <div class="rm-price">$280<span class="per">/night</span></div>
           <img class="rm-img" src="https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400&q=80" alt="Room">
-          <div class="rm-actions"><button class="rm-action">✏ Edit</button><button class="rm-action del">🗑 Delete</button></div>
+          <div class="rm-actions"><button class="rm-action">Edit</button><button class="rm-action del">Delete</button></div>
         </div>
       </div>
     </div>
@@ -900,10 +1150,10 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Hotel Manager</div>
       <div class="snav">
-        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
-        <button class="snav-btn active" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
-        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico"><i data-lucide="bed"></i></span> Rooms</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico"><i data-lucide="image"></i></span> Media</button>
+        <button class="snav-btn" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico"><i data-lucide="bar-chart-2"></i></span> Analytics</button>
       </div>
     </div>
     <div class="dash-main">
@@ -935,10 +1185,10 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Hotel Manager</div>
       <div class="snav">
-        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico">🛏</span> Rooms</button>
-        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico">🖼</span> Media</button>
-        <button class="snav-btn active" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico">📊</span> Analytics</button>
+        <button class="snav-btn" onclick="showManagerPage('managerDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn" onclick="showManagerPage('managerRoomsPage')"><span class="snav-ico"><i data-lucide="bed"></i></span> Rooms</button>
+        <button class="snav-btn" onclick="showManagerPage('managerMediaPage')"><span class="snav-ico"><i data-lucide="image"></i></span> Media</button>
+        <button class="snav-btn active" onclick="showManagerPage('managerAnalyticsPage')"><span class="snav-ico"><i data-lucide="bar-chart-2"></i></span> Analytics</button>
       </div>
     </div>
     <div class="dash-main">
@@ -977,9 +1227,9 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Admin</div>
       <div class="snav">
-        <button class="snav-btn active" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
-        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+        <button class="snav-btn active" onclick="showAdminPage('adminDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico"><i data-lucide="building"></i></span> Manage Hotels</button>
+        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico"><i data-lucide="users"></i></span> Manage Users</button>
       </div>
     </div>
     <div class="dash-main">
@@ -1015,9 +1265,9 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Admin</div>
       <div class="snav">
-        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn active" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
-        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn active" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico"><i data-lucide="building"></i></span> Manage Hotels</button>
+        <button class="snav-btn" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico"><i data-lucide="users"></i></span> Manage Users</button>
       </div>
     </div>
     <div class="dash-main">
@@ -1029,11 +1279,11 @@
         <table>
           <thead><tr><th>Hotel Name</th><th>Location</th><th>Rooms</th><th>Status</th><th>Actions</th></tr></thead>
           <tbody>
-            <tr><td>Grand Plaza Hotel &amp; Spa</td><td><span class="td-loc">📍 Los Angeles, CA</span></td><td>120</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
-            <tr><td>Sunset Resort &amp; Spa</td><td><span class="td-loc">📍 Miami, FL</span></td><td>85</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
-            <tr><td>Mountain View Lodge</td><td><span class="td-loc">📍 Denver, CO</span></td><td>65</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
-            <tr><td>City Center Hotel</td><td><span class="td-loc">📍 New York, NY</span></td><td>95</td><td><span class="td-badge pending">Pending</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
-            <tr><td>Beachfront Paradise</td><td><span class="td-loc">📍 San Diego, CA</span></td><td>78</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit">✏</button><button class="td-del">🗑</button></div></td></tr>
+            <tr><td>Grand Plaza Hotel &amp; Spa</td><td><span class="td-loc"><i data-lucide="map-pin" class="lbl-ico"></i> Los Angeles, CA</span></td><td>120</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit"><i data-lucide="pencil"></i></button><button class="td-del"><i data-lucide="trash-2"></i></button></div></td></tr>
+            <tr><td>Sunset Resort &amp; Spa</td><td><span class="td-loc"><i data-lucide="map-pin" class="lbl-ico"></i> Miami, FL</span></td><td>85</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit"><i data-lucide="pencil"></i></button><button class="td-del"><i data-lucide="trash-2"></i></button></div></td></tr>
+            <tr><td>Mountain View Lodge</td><td><span class="td-loc"><i data-lucide="map-pin" class="lbl-ico"></i> Denver, CO</span></td><td>65</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit"><i data-lucide="pencil"></i></button><button class="td-del"><i data-lucide="trash-2"></i></button></div></td></tr>
+            <tr><td>City Center Hotel</td><td><span class="td-loc"><i data-lucide="map-pin" class="lbl-ico"></i> New York, NY</span></td><td>95</td><td><span class="td-badge pending">Pending</span></td><td><div class="td-actions"><button class="td-edit"><i data-lucide="pencil"></i></button><button class="td-del"><i data-lucide="trash-2"></i></button></div></td></tr>
+            <tr><td>Beachfront Paradise</td><td><span class="td-loc"><i data-lucide="map-pin" class="lbl-ico"></i> San Diego, CA</span></td><td>78</td><td><span class="td-badge active">Active</span></td><td><div class="td-actions"><button class="td-edit"><i data-lucide="pencil"></i></button><button class="td-del"><i data-lucide="trash-2"></i></button></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -1049,9 +1299,9 @@
     <div class="dash-sidebar">
       <div class="dash-sidebar-title">Admin</div>
       <div class="snav">
-        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico">⊞</span> Dashboard</button>
-        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico">🏨</span> Manage Hotels</button>
-        <button class="snav-btn active" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico">👥</span> Manage Users</button>
+        <button class="snav-btn" onclick="showAdminPage('adminDashPage')"><span class="snav-ico"><i data-lucide="layout-grid"></i></span> Dashboard</button>
+        <button class="snav-btn" onclick="showAdminPage('adminHotelsPage')"><span class="snav-ico"><i data-lucide="building"></i></span> Manage Hotels</button>
+        <button class="snav-btn active" onclick="showAdminPage('adminUsersPage')"><span class="snav-ico"><i data-lucide="users"></i></span> Manage Users</button>
       </div>
     </div>
     <div class="dash-main">
@@ -1074,7 +1324,7 @@
           </table>
         </div>
         <div class="role-ctrl">
-          <div class="role-ctrl-title">🛡 Role Access Control</div>
+          <div class="role-ctrl-title">Role Access Control</div>
           <div class="role-ctrl-lbl">Role</div>
           <select class="role-ctrl-sel"><option>Hotel Manager</option><option>Admin</option><option>User</option></select>
           <div class="perms-heading">Permissions</div>
@@ -1097,19 +1347,15 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links">
       <a href="#" onclick="showPage('homePage')">Home</a>
-      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">❤️ Wishlist</a>
+      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">Wishlist</a>
       <a href="#" onclick="showPage('myReservationsPage');loadMyReservations()">My Reservations</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
   <div style="max-width:560px;margin:28px auto;padding:0 20px">
-    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:20px">👤 My Profile</h2>
+    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:20px">My Profile</h2>
     <div style="background:var(--white);border-radius:16px;box-shadow:var(--shadow-sm);padding:24px;margin-bottom:14px">
       <div style="font-size:15px;font-weight:700;margin-bottom:14px">Personal Information</div>
       <div style="display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:8px;padding:8px 12px;margin-bottom:8px;font-size:13px;color:var(--sub)">
@@ -1167,19 +1413,15 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links">
       <a href="#" onclick="showPage('homePage')">Home</a>
-      <a href="#" onclick="showPage('wishlistPage');renderWishlist()" style="color:var(--green)">❤️ Wishlist</a>
+      <a href="#" onclick="showPage('wishlistPage');renderWishlist()" style="color:var(--green)">Wishlist</a>
       <a href="#" onclick="showPage('myReservationsPage');loadMyReservations()">My Reservations</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
   <div style="max-width:760px;margin:28px auto;padding:0 20px">
-    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:6px">❤️ My Wishlist</h2>
+    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:6px">My Wishlist</h2>
     <p style="font-size:13px;color:var(--sub);margin-bottom:20px">Hotels you saved for later</p>
     <div id="wishlistList"></div>
   </div>
@@ -1193,19 +1435,15 @@
     <span class="nav-logo">Book Hotel</span>
     <div class="nav-links">
       <a href="#" onclick="showPage('homePage')">Home</a>
-      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">❤️ Wishlist</a>
+      <a href="#" onclick="showPage('wishlistPage');renderWishlist()">Wishlist</a>
       <a href="#" onclick="showPage('myReservationsPage');loadMyReservations()" style="color:var(--green)">My Reservations</a>
     </div>
     <div class="nav-right">
-            <div class="lang-switcher">
-        <button onclick="setLang('tr')" id="btnTR" class="lang-btn active" title="Türkçe">🇹🇷</button>
-        <button onclick="setLang('en')" id="btnEN" class="lang-btn" title="English">🇬🇧</button>
-      </div>
       <button class="nav-logout" id="navLogout" onclick="logout()">Logout</button>
     </div>
   </nav>
   <div style="max-width:760px;margin:28px auto;padding:0 20px">
-    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:6px">📋 My Reservations</h2>
+    <h2 style="font-family:var(--serif);font-size:28px;margin-bottom:6px">My Reservations</h2>
     <p style="font-size:13px;color:var(--sub);margin-bottom:20px">All your bookings in one place</p>
     <div id="myResList"></div>
     <div style="margin-top:24px;text-align:center">
@@ -1221,7 +1459,7 @@
   <div class="auth-wrap">
     <div class="auth-bar">Staff Registration</div>
     <div class="auth-body">
-      <div class="auth-card admin-auth-card">
+      <form class="auth-card admin-auth-card" onsubmit="submitStaffRegister(event)">
         <h1>Create Staff Account</h1>
         <p class="auth-sub">Register as Admin or Hotel Manager with 2FA.</p>
         <div class="field">
@@ -1245,11 +1483,11 @@
           </select>
         </div>
         <div class="ferr" id="staffRegErr"></div>
-        <button class="btn-primary" onclick="submitStaffRegister()">Create Staff Account</button>
+        <button class="btn-primary" type="submit">Create Staff Account</button>
         <div class="auth-switch">Already have an account? <a href="#" onclick="showPage('adminLoginPage')">Sign In</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
         <div class="auth-foot">2FA code will appear after registration.</div>
-      </div>
+      </form>
     </div>
   </div>
 </div>
@@ -1258,11 +1496,15 @@
   CHATBOT PANEL (global overlay)
 ══════════════════════════════════════════ -->
 <!-- ══ FLOATING CHATBOT BUTTON ══ -->
-<button id="chatbotFloatBtn" onclick="toggleChatbot()" style="position:fixed;bottom:28px;right:28px;width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,var(--green-dark),var(--green));border:none;color:#fff;font-size:26px;box-shadow:0 6px 24px rgba(45,122,106,.5);cursor:pointer;z-index:299;display:flex;align-items:center;justify-content:center;transition:transform .25s;" title="AI Hotel Assistant">🤖</button>
+<button id="chatbotFloatBtn" onclick="toggleChatbot()" class="chat-fab" title="AI Hotel Assistant">
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="15" x2="8" y2="15"/><line x1="16" y1="15" x2="16" y2="15"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+</button>
 
 <div class="chatbot-panel" id="chatbotPanel">
   <div class="chat-head">
-    <div class="chat-head-avatar">🤖</div>
+    <div class="chat-head-avatar">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><circle cx="8" cy="15" r="1" fill="currentColor" stroke="none"/><circle cx="16" cy="15" r="1" fill="currentColor" stroke="none"/></svg>
+    </div>
     <div>
       <div class="chat-head-name" id="chatTitle">Cyprus Hotel AI</div>
       <div class="chat-head-status" id="chatStatus">● Checking...</div>
@@ -1270,20 +1512,33 @@
     <button class="chat-close" onclick="toggleChatbot()">−</button>
   </div>
   <div class="chat-msgs" id="chatMsgs">
-    <div class="chat-msg bot" id="chatWelcome">👋 Hello! I'm your Cyprus hotel assistant. Tell me which city or type of hotel you're looking for! 🏨</div>
+    <div class="chat-msg bot" id="chatWelcome">Hello! I'm your Cyprus hotel assistant. Tell me which city or type of hotel you're looking for.</div>
   </div>
   <div class="chat-sugs" id="chatSugs">
-    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="🏖 Girne otelleri" data-en="🏖 Hotels in Kyrenia">🏖 Hotels in Kyrenia</button>
-    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="💰 Uygun fiyatlı" data-en="💰 Budget friendly">💰 Budget friendly</button>
-    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="🎰 Casino resort" data-en="🎰 Casino resorts">🎰 Casino resorts</button>
-    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="🏝 Plaj oteli" data-en="🏝 Beach hotels">🏝 Beach hotels</button>
+    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="Girne otelleri" data-en="Hotels in Kyrenia">Hotels in Kyrenia</button>
+    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="Uygun fiyatlı" data-en="Budget friendly">Budget friendly</button>
+    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="Casino resort" data-en="Casino resorts">Casino resorts</button>
+    <button class="chat-sug" onclick="chatSuggest(this)" data-tr="Plaj oteli" data-en="Beach hotels">Beach hotels</button>
   </div>
   <div class="chat-input-row">
     <input type="text" id="chatInput" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendChatMsg()">
-    <button class="chat-send" onclick="sendChatMsg()">➤</button>
+    <button class="chat-send" onclick="sendChatMsg()"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
 </div>
 
-<script src="/static/script.js"></script>
+<script src="/static/script.js?v=3"></script>
+
+<!-- Custom date picker panel (shared) -->
+<div id="customDp" class="custom-dp" style="display:none" onclick="event.stopPropagation()"></div>
+
+<div id="amenitiesModal" class="amenities-modal" style="display:none" onclick="closeAmenitiesModal()">
+  <div class="amenities-modal-card" onclick="event.stopPropagation()">
+    <div class="amenities-modal-head">
+      <h3>All amenities</h3>
+      <button onclick="closeAmenitiesModal()" aria-label="Close amenities">×</button>
+    </div>
+    <div id="amenitiesModalList" class="amenities-modal-list"></div>
+  </div>
+</div>
 </body>
 </html>

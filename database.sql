@@ -1,9 +1,11 @@
+
 -- MySQL dump 10.13  Distrib 9.6.0, for macos26.3 (arm64)
 --
 -- Host: localhost    Database: hotel_reservation
 -- ------------------------------------------------------
 -- Server version	9.6.0
-
+CREATE DATABASE IF NOT EXISTS hotel_reservation;
+USE hotel_reservation;
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -21,7 +23,7 @@ SET @@SESSION.SQL_LOG_BIN= 0;
 -- GTID state at the beginning of the backup 
 --
 
-SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '02b314ea-4ebe-11f1-9e45-db860ba31479:1-10';
+-- SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ '02b314ea-4ebe-11f1-9e45-db860ba31479:1-10';
 
 --
 -- Table structure for table `reservations`

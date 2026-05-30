@@ -1,0 +1,9 @@
+@import '../../static/style.css';
+
+* { box-sizing: border-box; }
+#root { min-height: 100vh; }
+.page-loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-size: 16px; color: var(--sub); }
+
+/* React-specific overrides */
+.page { display: block !important; }
+.dash-page { display: flex !important; }

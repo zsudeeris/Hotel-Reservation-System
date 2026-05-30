@@ -18,7 +18,7 @@ def generate_2fa_code():
     return str(random.randint(100000, 999999))
 
 
-def run_query(query, params=None, fetchone=False, fetchall=False, commit=False):
+def run_query(query, params=None, fetchone=False, fetchall=False, commit=False, return_lastrowid=False):
     conn = get_connection()
     cursor = conn.cursor(dictionary=True)
     try:
@@ -30,6 +30,8 @@ def run_query(query, params=None, fetchone=False, fetchall=False, commit=False):
             result = cursor.fetchall()
         if commit:
             conn.commit()
+        if return_lastrowid:
+            return cursor.lastrowid
         return result
     finally:
         cursor.close()
@@ -98,8 +100,8 @@ def login():
     if not valid_password:
         return jsonify(success=False, message="Email veya şifre hatalı."), 401
 
-    if role_hint and user["role"] != role_hint:
-        return jsonify(success=False, message="Bu hesap istenen role sahip değil."), 403
+    if role_hint == "ADMIN" and user["role"] not in ("ADMIN", "HOTEL_MANAGER"):
+        return jsonify(success=False, message="Bu hesap admin veya hotel manager değil."), 403
 
     code = start_2fa_for_user(user["id"], email)
     return jsonify(success=True, message="2FA kodu oluşturuldu.", debug_code=code)
@@ -339,10 +341,13 @@ def search_hotels():
         "price_asc":    "price_from ASC",
         "price_desc":   "price_from DESC",
         "score_desc":   "score DESC",
+        "score_asc":    "score ASC",
         "reviews_desc": "review_count DESC",
+        "popular":      "review_count DESC",
+        "recommended":  "score DESC, review_count DESC",
         "name_asc":     "hotel_name ASC",
     }
-    order_by = sort_map.get(sort, "score DESC")
+    order_by = sort_map.get(sort, "score DESC, review_count DESC")
 
     query = f"""
         SELECT id, hotel_name, city, district, score, label,
@@ -446,19 +451,18 @@ def create_reservation():
     except Exception:
         total = 0.0
 
-    run_query(
+    new_id = run_query(
         """INSERT INTO reservations
            (user_id, hotel_id, room_id, check_in_date, check_out_date,
             guest_count, total_price, guest_name, guest_email, guest_phone, reservation_source)
            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (user_id, hotel_id, room_id, checkin, checkout,
          guests, total, guest_name, guest_email, guest_phone, source),
-        commit=True,
+        commit=True, return_lastrowid=True,
     )
-    res = run_query("SELECT id FROM reservations ORDER BY id DESC LIMIT 1", fetchone=True)
-    booking_ref = f"BK-{datetime.now().year}-{res['id']:06d}" if res else "BK-UNKNOWN"
+    booking_ref = f"BK-{datetime.now().year}-{new_id:06d}" if new_id else "BK-UNKNOWN"
 
-    return jsonify(success=True, reservation_id=res["id"] if res else None,
+    return jsonify(success=True, reservation_id=new_id,
                    booking_ref=booking_ref, total_price=total, nights=nights)
 
 
@@ -563,8 +567,8 @@ def admin_add_hotel():
     data = request.get_json() or {}
     run_query(
         """INSERT INTO hotels (hotel_name, city, district, score, label, reviews, review_count,
-                               price, price_from, img, description, amenities, stars)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+                               price, price_from, img, description, amenities, stars, status)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'ACTIVE')""",
         (data.get("hotel_name"), data.get("city"), data.get("district"),
          data.get("score", 8.0), data.get("label", "Good"),
          data.get("reviews", "0 reviews"), data.get("review_count", 0),
