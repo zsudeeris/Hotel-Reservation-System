@@ -1,6 +1,6 @@
 Hotel Management System
 
-A hotel reservation and management system built with Flask, MySQL, HTML, CSS, and JavaScript.
+A hotel reservation and management system built with Flask,React, MySQL, HTML, CSS, and JavaScript.
 
 Features:
 - User login and registration
