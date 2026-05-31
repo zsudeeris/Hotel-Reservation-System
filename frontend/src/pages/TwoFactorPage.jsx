@@ -7,7 +7,7 @@ import { clearStoredReturnTo, getStoredReturnTo } from '../utils/authRedirect.js
 
 export default function TwoFactorPage() {
   const navigate = useNavigate()
-  const { verify2FA, pendingEmail, pendingCode, setPendingCode } = useAuth()
+  const { verify2FA, pendingEmail, pendingCode, pendingRole, pendingAuthMode, setPendingCode } = useAuth()
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -57,8 +57,8 @@ export default function TwoFactorPage() {
       // Route by role returned in verify response
       const returnTo = getStoredReturnTo()
       clearStoredReturnTo()
-      if (data.role === 'ADMIN') navigate('/admin', { replace: true })
-      else if (data.role === 'HOTEL_MANAGER') navigate('/manager', { replace: true })
+      if (pendingAuthMode === 'staff' && data.role === 'ADMIN') navigate('/admin', { replace: true })
+      else if (pendingAuthMode === 'staff' && data.role === 'HOTEL_MANAGER') navigate('/manager', { replace: true })
       else navigate(returnTo || '/home', { replace: true })
     } catch {
       setError('Invalid code. Please try again.')
@@ -84,22 +84,27 @@ export default function TwoFactorPage() {
 
   const mins = Math.floor(timer / 60)
   const secs = timer % 60
+  const isStaffFlow = pendingAuthMode === 'staff'
+  const demoCodeLabel = isStaffFlow ? 'Demo Staff 2FA Code' : 'Demo 2FA Code'
+  const accessTitle = isStaffFlow
+    ? (pendingRole === 'ADMIN' ? 'Administrator Access' : 'Hotel Manager Access')
+    : 'Verify Your Identity'
 
   return (
     <div className="auth-wrap">
       <div className="auth-bar">
         <Shield style={{ width: 16, height: 16 }} />
-        BookHotel — Two-Factor Authentication
+        {isStaffFlow ? 'BookHotel — Staff Two-Factor Authentication' : 'BookHotel — Two-Factor Authentication'}
       </div>
       <div className="auth-body">
         <div className="auth-card">
-          <h1>Verify Your Identity</h1>
+          <h1>{accessTitle}</h1>
           <p className="twofa-sub">
             Demo mode only. Use the code shown below to continue.<br />
             <strong>{pendingEmail || 'your email'}</strong>
           </p>
           <div className="demo-auth-box demo-twofa-box">
-            <div className="demo-auth-title">Demo 2FA Code</div>
+            <div className="demo-auth-title">{demoCodeLabel}</div>
             <div className="demo-auth-row">
               <span>Code</span>
               <code>{pendingCode || '------'}</code>

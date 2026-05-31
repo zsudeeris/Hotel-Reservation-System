@@ -28,6 +28,39 @@ TWO_FACTOR_MINUTES = 5
 DEMO_EMAIL = "demo@bookhotel.com"
 DEMO_PASSWORD = "Demo123!"
 DEMO_PASSWORD_HASH = "scrypt:32768:8:1$278nicAeLJJ1zdXU$b7e1cef33343bef205b0c9c81395d4efb889dfd815e7cde99527fa61d0839d73f489f92da7c61862ceac51ad2260fdd007bcf51cb3818cd4d89c4163a59fdc21"
+DEMO_STAFF_ACCOUNTS = [
+    {"name": "Admin Demo", "email": "admin@bookhotel.com", "password": "Admin123!", "role": "ADMIN", "phone": None},
+    {"name": "Manager Demo", "email": "manager@bookhotel.com", "password": "Manager123!", "role": "HOTEL_MANAGER", "phone": None},
+]
+
+
+def get_demo_manager_hotel():
+    try:
+        hotel = run_query(
+            """
+            SELECT id, hotel_name
+            FROM hotels
+            WHERE status='ACTIVE' AND (
+              hotel_name LIKE %s OR hotel_name LIKE %s OR hotel_name LIKE %s OR hotel_name LIKE %s
+            )
+            ORDER BY CASE
+              WHEN hotel_name LIKE %s THEN 0
+              WHEN hotel_name LIKE %s THEN 1
+              ELSE 2
+            END, id
+            LIMIT 1
+            """,
+            ('%Arkin%', '%Arkın%', '%Iskele%', '%İskele%', '%Arkin%', '%Arkın%'),
+            fetchone=True,
+        )
+        if hotel:
+            return hotel
+        return run_query(
+            "SELECT id, hotel_name FROM hotels WHERE status='ACTIVE' ORDER BY id LIMIT 1",
+            fetchone=True,
+        )
+    except Exception:
+        return None
 
 
 def generate_2fa_code():
@@ -81,6 +114,42 @@ def ensure_demo_auth_seed():
 
 
 ensure_demo_auth_seed()
+
+
+def ensure_staff_hotel_mapping_column():
+    try:
+        run_query("ALTER TABLE users ADD COLUMN hotel_id INT DEFAULT NULL", commit=True)
+    except Exception:
+        pass
+
+
+ensure_staff_hotel_mapping_column()
+
+
+def ensure_demo_staff_seed():
+    try:
+        manager_hotel = get_demo_manager_hotel()
+        manager_hotel_id = manager_hotel["id"] if manager_hotel else None
+        for account in DEMO_STAFF_ACCOUNTS:
+            existing = run_query("SELECT id, role, hotel_id FROM users WHERE email=%s", (account["email"],), fetchone=True)
+            hotel_id = manager_hotel_id if account["role"] == "HOTEL_MANAGER" else None
+            if existing:
+                run_query(
+                    "UPDATE users SET name=%s, password=%s, role=%s, phone=%s, hotel_id=%s WHERE email=%s",
+                    (account["name"], generate_password_hash(account["password"]), account["role"], account["phone"], hotel_id, account["email"]),
+                    commit=True,
+                )
+                continue
+            run_query(
+                "INSERT INTO users (name, email, password, role, phone, hotel_id) VALUES (%s,%s,%s,%s,%s,%s)",
+                (account["name"], account["email"], generate_password_hash(account["password"]), account["role"], account["phone"], hotel_id),
+                commit=True,
+            )
+    except Exception:
+        pass
+
+
+ensure_demo_staff_seed()
 
 
 def sync_hotel_review_stats():
@@ -242,6 +311,9 @@ def register():
     password = data.get("password") or ""
     name = (data.get("name") or email.split("@")[0] or "Guest").strip()
     phone = (data.get("phone") or "").strip()
+    role = data.get("role", "USER")
+    if role not in ("USER", "ADMIN", "HOTEL_MANAGER"):
+        role = "USER"
 
     if not email or "@" not in email or len(password) < 6:
         return jsonify(success=False, message="Geçerli email ve en az 6 karakter şifre giriniz."), 400
@@ -249,13 +321,34 @@ def register():
     if run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True):
         return jsonify(success=False, message="Bu email zaten kayıtlı."), 409
 
+    hotel_id = data.get("hotel_id")
+    if role == "HOTEL_MANAGER" and not hotel_id:
+        demo_hotel = get_demo_manager_hotel()
+        hotel_id = demo_hotel["id"] if demo_hotel else None
+    if role != "HOTEL_MANAGER":
+        hotel_id = None
+
     run_query(
-        "INSERT INTO users (name, email, password, phone, role) VALUES (%s,%s,%s,%s,'USER')",
-        (name, email, generate_password_hash(password), phone), commit=True,
+        "INSERT INTO users (name, email, password, phone, role, hotel_id) VALUES (%s,%s,%s,%s,%s,%s)",
+        (name, email, generate_password_hash(password), phone, role, hotel_id), commit=True,
     )
     user = run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True)
     code = start_2fa_for_user(user["id"], email)
-    return jsonify(success=True, message="Hesap oluşturuldu.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
+    payload = {
+        "success": True,
+        "message": "Hesap oluşturuldu.",
+        "debug_code": code,
+        "expires_in": TWO_FACTOR_MINUTES * 60,
+        "role": role,
+    }
+    if role == "HOTEL_MANAGER":
+        demo_hotel = get_demo_manager_hotel()
+        if demo_hotel:
+            payload["hotel_id"] = demo_hotel["id"]
+            payload["hotelId"] = demo_hotel["id"]
+            payload["hotel_name"] = demo_hotel["hotel_name"]
+            payload["hotelName"] = demo_hotel["hotel_name"]
+    return jsonify(payload)
 
 
 @app.route("/api/login", methods=["POST"])
@@ -278,11 +371,29 @@ def login():
     if not valid_password:
         return jsonify(success=False, message="Email veya şifre hatalı."), 401
 
-    if role_hint == "ADMIN" and user["role"] not in ("ADMIN", "HOTEL_MANAGER"):
-        return jsonify(success=False, message="Bu hesap admin veya hotel manager değil."), 403
+    if role_hint in ("ADMIN", "HOTEL_MANAGER") and user["role"] != role_hint:
+        return jsonify(success=False, message="Invalid staff credentials or role."), 403
 
     code = start_2fa_for_user(user["id"], email)
-    return jsonify(success=True, message="2FA kodu oluşturuldu.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
+    payload = {
+        "success": True,
+        "message": "2FA kodu oluşturuldu.",
+        "debug_code": code,
+        "expires_in": TWO_FACTOR_MINUTES * 60,
+        "role": user["role"],
+    }
+    if user["role"] == "HOTEL_MANAGER":
+        hotel = None
+        if user.get("hotel_id"):
+            hotel = run_query("SELECT id, hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (user["hotel_id"],), fetchone=True)
+        if not hotel:
+            hotel = get_demo_manager_hotel()
+        if hotel:
+            payload["hotel_id"] = hotel["id"]
+            payload["hotelId"] = hotel["id"]
+            payload["hotel_name"] = hotel["hotel_name"]
+            payload["hotelName"] = hotel["hotel_name"]
+    return jsonify(payload)
 
 
 @app.route("/api/resend-2fa", methods=["POST"])
@@ -324,7 +435,46 @@ def verify_2fa():
     run_query("UPDATE users SET two_factor_code=NULL, two_factor_expires=NULL WHERE id=%s",
               (user["id"],), commit=True)
 
-    return jsonify(success=True, role=user["role"], name=user["name"])
+    if user["role"] == "HOTEL_MANAGER":
+        hotel = None
+        hotel_id = user.get("hotel_id")
+        if hotel_id:
+            hotel = run_query("SELECT id, hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (hotel_id,), fetchone=True)
+        if not hotel:
+            hotel = get_demo_manager_hotel()
+            if hotel:
+                run_query("UPDATE users SET hotel_id=%s WHERE id=%s", (hotel["id"], user["id"]), commit=True)
+        if hotel:
+            session["hotel_id"] = hotel["id"]
+            session["hotel_name"] = hotel["hotel_name"]
+    else:
+        session.pop("hotel_id", None)
+        session.pop("hotel_name", None)
+
+    response = {
+        "success": True,
+        "role": user["role"],
+        "name": user["name"],
+    }
+    if user["role"] == "HOTEL_MANAGER":
+        hotel = None
+        hotel_id = user.get("hotel_id")
+        if hotel_id:
+            hotel = run_query("SELECT id, hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (hotel_id,), fetchone=True)
+        if not hotel:
+            hotel = get_demo_manager_hotel()
+            if hotel:
+                run_query("UPDATE users SET hotel_id=%s WHERE id=%s", (hotel["id"], user["id"]), commit=True)
+        if hotel:
+            session["hotel_id"] = hotel["id"]
+            session["hotel_name"] = hotel["hotel_name"]
+            response.update({
+                "hotel_id": hotel["id"],
+                "hotelId": hotel["id"],
+                "hotel_name": hotel["hotel_name"],
+                "hotelName": hotel["hotel_name"],
+            })
+    return jsonify(response)
 
 
 @app.route("/api/me")
@@ -333,9 +483,34 @@ def me():
     if not user_id:
         return jsonify(authenticated=False)
     user = run_query(
-        "SELECT id, name, email, role, phone FROM users WHERE id=%s",
+        "SELECT id, name, email, role, phone, hotel_id FROM users WHERE id=%s",
         (user_id,), fetchone=True,
     )
+    if user:
+        if user.get("role") == "HOTEL_MANAGER":
+            hotel = None
+            if user.get("hotel_id"):
+                hotel = run_query(
+                    "SELECT id, hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'",
+                    (user["hotel_id"],), fetchone=True,
+                )
+            if not hotel:
+                hotel = get_demo_manager_hotel()
+                if hotel:
+                    user["hotel_id"] = hotel["id"]
+                    run_query("UPDATE users SET hotel_id=%s WHERE id=%s", (hotel["id"], user_id), commit=True)
+            if hotel:
+                user["hotel_name"] = hotel["hotel_name"]
+                user["hotelId"] = hotel["id"]
+                user["hotelName"] = hotel["hotel_name"]
+                session["hotel_id"] = hotel["id"]
+                session["hotel_name"] = hotel["hotel_name"]
+        else:
+            user["hotel_name"] = None
+            user["hotelId"] = None
+            user["hotelName"] = None
+            session.pop("hotel_id", None)
+            session.pop("hotel_name", None)
     return jsonify(authenticated=bool(user), user=user)
 
 
@@ -362,9 +537,16 @@ def register_staff():
     if run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True):
         return jsonify(success=False, message="This email is already registered."), 409
 
+    hotel_id = data.get("hotel_id")
+    if role == "HOTEL_MANAGER" and not hotel_id:
+        demo_hotel = get_demo_manager_hotel()
+        hotel_id = demo_hotel["id"] if demo_hotel else None
+    if role != "HOTEL_MANAGER":
+        hotel_id = None
+
     run_query(
-        "INSERT INTO users (name, email, password, role) VALUES (%s,%s,%s,%s)",
-        (name, email, generate_password_hash(password), role),
+        "INSERT INTO users (name, email, password, role, hotel_id) VALUES (%s,%s,%s,%s,%s)",
+        (name, email, generate_password_hash(password), role, hotel_id),
         commit=True,
     )
     user = run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True)
@@ -427,14 +609,86 @@ def change_password():
     return jsonify(success=True, message="Şifre başarıyla değiştirildi.")
 
 
+def get_staff_hotel_scope():
+    if session.get("role") != "HOTEL_MANAGER":
+        return None
+    hotel_id = session.get("hotel_id")
+    if hotel_id:
+        hotel = run_query("SELECT id, hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (hotel_id,), fetchone=True)
+        if hotel:
+            session["hotel_name"] = hotel["hotel_name"]
+            return hotel_id
+        session.pop("hotel_id", None)
+
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+
+    user = run_query("SELECT hotel_id FROM users WHERE id=%s", (user_id,), fetchone=True) or {}
+    hotel_id = user.get("hotel_id")
+    if not hotel_id:
+        hotel = get_demo_manager_hotel()
+        if hotel:
+            hotel_id = hotel["id"]
+            run_query("UPDATE users SET hotel_id=%s WHERE id=%s", (hotel_id, user_id), commit=True)
+    if hotel_id:
+        hotel = run_query("SELECT hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (hotel_id,), fetchone=True)
+        session["hotel_id"] = hotel_id
+        session["hotel_name"] = hotel["hotel_name"] if hotel else None
+    return hotel_id
+
+
 @app.route("/api/manager/stats")
 def manager_stats():
     if session.get("role") not in ("HOTEL_MANAGER", "ADMIN"):
         return jsonify(success=False, message="Yetki yok."), 403
+    scope_hotel_id = get_staff_hotel_scope() if session.get("role") == "HOTEL_MANAGER" else None
+    reservation_scope = "WHERE COALESCE(is_deleted,0)=0"
+    confirmed_scope = "WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0"
+    room_scope = "WHERE status='ACTIVE'"
+    occupied_scope = "WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0"
+    params = []
+    if scope_hotel_id:
+        reservation_scope += " AND hotel_id=%s"
+        confirmed_scope += " AND hotel_id=%s"
+        room_scope += " AND hotel_id=%s"
+        occupied_scope += " AND hotel_id=%s"
+        params = [scope_hotel_id]
+    total_reservations = (run_query(f"SELECT COUNT(*) as c FROM reservations {reservation_scope}", tuple(params), fetchone=True) or {}).get("c", 0)
+    active_reservations = (run_query(f"SELECT COUNT(*) as c FROM reservations {confirmed_scope}", tuple(params), fetchone=True) or {}).get("c", 0)
+    total_revenue = (run_query(f"SELECT COALESCE(SUM(total_price),0) as s FROM reservations {confirmed_scope}", tuple(params), fetchone=True) or {}).get("s", 0)
+    total_rooms = (run_query(f"SELECT COUNT(*) as c FROM rooms {room_scope}", tuple(params), fetchone=True) or {}).get("c", 0)
+    occupied_rooms = (run_query(
+        f"""SELECT COUNT(DISTINCT room_id) as c FROM reservations
+            {occupied_scope}
+            AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
+        tuple(params) + (
+            datetime.now().date().strftime("%Y-%m-%d"),
+            (datetime.now().date() + timedelta(days=1)).strftime("%Y-%m-%d"),
+        ),
+        fetchone=True,
+    ) or {}).get("c", 0)
+    review_scope = "WHERE 1=1"
+    review_params = []
+    if scope_hotel_id:
+        review_scope += " AND hotel_id=%s"
+        review_params = [scope_hotel_id]
+    avg_rating = (run_query(f"SELECT ROUND(AVG(rating),1) as a FROM reviews {review_scope}", tuple(review_params), fetchone=True) or {}).get("a")
+    occupancy_rate = round((occupied_rooms / total_rooms) * 100, 1) if total_rooms else 0
+    hotel_name = None
+    if scope_hotel_id:
+        hotel = run_query("SELECT hotel_name FROM hotels WHERE id=%s AND status='ACTIVE'", (scope_hotel_id,), fetchone=True)
+        hotel_name = hotel["hotel_name"] if hotel else None
     stats = {
-        "total_reservations": (run_query("SELECT COUNT(*) as c FROM reservations WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0", fetchone=True) or {}).get("c", 0),
-        "total_revenue":      (run_query("SELECT COALESCE(SUM(total_price),0) as s FROM reservations WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0", fetchone=True) or {}).get("s", 0),
-        "occupancy_rate":     78,
+        "hotel_id": scope_hotel_id,
+        "hotel_name": hotel_name,
+        "total_reservations": int(total_reservations or 0),
+        "active_reservations": int(active_reservations or 0),
+        "total_revenue": float(total_revenue or 0),
+        "total_rooms": int(total_rooms or 0),
+        "available_rooms": max(int(total_rooms or 0) - int(occupied_rooms or 0), 0),
+        "occupancy_rate": occupancy_rate,
+        "avg_rating": float(avg_rating) if avg_rating is not None else None,
     }
     return jsonify(stats)
 
@@ -443,13 +697,20 @@ def manager_stats():
 def manager_reservations():
     if session.get("role") not in ("HOTEL_MANAGER", "ADMIN"):
         return jsonify(success=False, message="Yetki yok."), 403
+    scope_hotel_id = get_staff_hotel_scope() if session.get("role") == "HOTEL_MANAGER" else None
+    scope_clause = "WHERE COALESCE(r.is_deleted,0)=0"
+    params = []
+    if scope_hotel_id:
+        scope_clause += " AND r.hotel_id=%s"
+        params = [scope_hotel_id]
     reservations = run_query(
         """SELECT r.*, h.hotel_name, rm.room_type, rm.room_number
            FROM reservations r
            LEFT JOIN hotels h  ON r.hotel_id = h.id
            LEFT JOIN rooms  rm ON r.room_id  = rm.id
-           WHERE COALESCE(r.is_deleted,0)=0
-           ORDER BY r.created_at DESC LIMIT 20""",
+           {scope_clause}
+           ORDER BY r.created_at DESC LIMIT 20""".format(scope_clause=scope_clause),
+        tuple(params),
         fetchall=True,
     )
     return jsonify(reservations or [])

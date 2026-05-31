@@ -43,7 +43,11 @@ function RequireRole({ children, roles }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="page-loading">Loading...</div>
   if (!user) return <Navigate to="/login" replace />
-  if (roles && !roles.includes(user.role)) return <Navigate to="/home" replace />
+  if (roles && !roles.includes(user.role)) {
+    if (user.role === 'ADMIN') return <Navigate to="/admin" replace />
+    if (user.role === 'HOTEL_MANAGER') return <Navigate to="/manager" replace />
+    return <Navigate to="/home" replace />
+  }
   return children
 }
 
@@ -83,7 +87,7 @@ function AppRoutes() {
 
       {/* Role restricted */}
       <Route path="/admin" element={<RequireRole roles={['ADMIN']}><AdminDashboardPage /></RequireRole>} />
-      <Route path="/manager" element={<RequireRole roles={['HOTEL_MANAGER', 'ADMIN']}><ManagerDashboardPage /></RequireRole>} />
+      <Route path="/manager" element={<RequireRole roles={['HOTEL_MANAGER']}><ManagerDashboardPage /></RequireRole>} />
 
       {/* 404 */}
       <Route path="*" element={<NotFoundPage />} />
