@@ -1,9 +1,26 @@
 import React from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Building2 } from 'lucide-react'
 
 export default function LandingNavbar() {
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const handleWhyUs = () => {
+    if (location.pathname === '/') {
+      // Already on home page, just scroll
+      const el = document.getElementById('why-us')
+      if (el) el.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      // Navigate to home first, then scroll
+      navigate('/')
+      setTimeout(() => {
+        const el = document.getElementById('why-us')
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 300)
+    }
+  }
+
   return (
     <nav className="lnav">
       <div className="lnav-logo" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/')}>
@@ -12,7 +29,7 @@ export default function LandingNavbar() {
       </div>
       <div className="lnav-links">
         <a onClick={() => navigate('/search')} style={{ cursor: 'pointer' }}>Hotels</a>
-        <a onClick={() => navigate('/#why-us')} style={{ cursor: 'pointer' }}>Why Us</a>
+        <a onClick={handleWhyUs} style={{ cursor: 'pointer' }}>Why Us</a>
       </div>
       <div className="lnav-right">
         <button className="lnav-signin" onClick={() => navigate('/login')}>Sign In</button>

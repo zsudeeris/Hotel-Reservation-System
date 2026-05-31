@@ -16,7 +16,9 @@ import {
 import Navbar from '../components/Navbar.jsx'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../hooks/useToast.js'
-import { createAdminMockData, formatAdminMoney } from '../data/adminMockData.js'
+import { adminGetHotels, adminGetUsers, adminGetReservations, adminGetStaff } from '../services/api.js'
+
+const formatAdminMoney = (n) => 'EUR ' + Number(n || 0).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
 
 const ADMIN_NAV = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -107,15 +109,14 @@ function ConfirmModal({ open, title, text, confirmLabel = 'Confirm', cancelLabel
 export default function AdminDashboardPage() {
   const { user } = useAuth()
   const { showToast } = useToast()
-  const seed = useMemo(() => createAdminMockData(), [])
-
   const [view, setView] = useState('dashboard')
-  const [hotels, setHotels] = useState(seed.hotels)
-  const [users, setUsers] = useState(seed.users)
-  const [staff, setStaff] = useState(seed.staff)
-  const [reservations, setReservations] = useState(seed.reservations)
-  const [activities, setActivities] = useState(seed.activities)
-  const [adminSettings, setAdminSettings] = useState(() => ({ ...seed.settings }))
+  const [hotels, setHotels] = useState([])
+  const [users, setUsers] = useState([])
+  const [staff, setStaff] = useState([])
+  const [reservations, setReservations] = useState([])
+  const [activities, setActivities] = useState([])
+  const [adminSettings, setAdminSettings] = useState({})
+  const [loading, setLoading] = useState(true)
 
   const [hotelDrawerMode, setHotelDrawerMode] = useState(null)
   const [hotelDraft, setHotelDraft] = useState(null)
@@ -134,8 +135,8 @@ export default function AdminDashboardPage() {
   const [reservationHotelMenuOpen, setReservationHotelMenuOpen] = useState(false)
   const reservationHotelFilterRef = useRef(null)
 
-  const [settingsDraft, setSettingsDraft] = useState(() => ({ ...seed.settings }))
-  const [maintenanceDraft, setMaintenanceDraft] = useState(() => Boolean(seed.settings.maintenanceMode))
+  const [settingsDraft, setSettingsDraft] = useState({})
+  const [maintenanceDraft, setMaintenanceDraft] = useState(false)
   const [saveFeedback, setSaveFeedback] = useState('')
 
   const [statusConfirm, setStatusConfirm] = useState(null)
@@ -177,6 +178,50 @@ export default function AdminDashboardPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  // Fetch real data from MySQL via API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        const [hotelsData, usersData, reservationsData, staffData] = await Promise.all([
+          adminGetHotels(),
+          adminGetUsers(),
+          adminGetReservations().catch(() => []),
+          adminGetStaff().catch(() => []),
+        ])
+        // Normalize hotels
+        const normalizedHotels = (hotelsData || []).map(h => ({
+          ...h,
+          name: h.hotel_name || h.name,
+          rating: h.score || h.rating,
+          status: (h.status || 'ACTIVE').toLowerCase(),
+        }))
+        // Separate users and staff
+        const staffRoles = ['ADMIN', 'HOTEL_MANAGER']
+        const normalizedUsers = (usersData || []).filter(u => !staffRoles.includes(u.role))
+        // Use dedicated staff endpoint if available, fallback to filtering users
+        const normalizedStaff = (staffData && staffData.length > 0)
+          ? staffData.map(s => ({ ...s, status: s.status || 'active', assigned_hotel: s.assigned_hotel || 'All Hotels' }))
+          : (usersData || []).filter(u => staffRoles.includes(u.role)).map(s => ({ ...s, status: 'active' }))
+        // Normalize reservations
+        const normalizedReservations = (reservationsData || []).map(r => ({
+          ...r,
+          hotel_name: r.hotel_name || 'Unknown Hotel',
+          guest_name: r.guest_name || r.user_name || 'Unknown Guest',
+        }))
+        setHotels(normalizedHotels)
+        setUsers(normalizedUsers)
+        setStaff(normalizedStaff)
+        setReservations(normalizedReservations)
+      } catch (err) {
+        console.error('Admin data fetch error:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchData()
+  }, [])
+
   useEffect(() => {
     if (view !== 'settings') return
     setSettingsDraft({ ...adminSettings })
@@ -186,31 +231,31 @@ export default function AdminDashboardPage() {
   const adminStats = useMemo(() => {
     const activeManagers = staff.filter(item => normalizeStatus(item.role) === 'hotel-manager' && normalizeStatus(item.status) === 'active').length
     const pendingStaffRequests = staff.filter(item => normalizeStatus(item.status) === 'pending').length
-    const totalRevenue = reservations.reduce((sum, res) => sum + Number(res.total_price || 0), 0) || seed.stats.monthlyRevenue
-    const avgRating = average(hotels.map(hotel => hotel.rating || 0)) || seed.stats.averageRating
+    const totalRevenue = reservations.reduce((sum, res) => sum + Number(res.total_price || 0), 0) || 0
+    const avgRating = average(hotels.map(hotel => hotel.rating || 0)) || 0
     const topHotel = [...hotels].sort((a, b) => Number(b.monthly_revenue || 0) - Number(a.monthly_revenue || 0))[0]
     const cityCounts = hotels.reduce((acc, hotel) => {
       const key = hotel.city || 'Unknown'
       acc[key] = (acc[key] || 0) + 1
       return acc
     }, {})
-    const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || seed.stats.topCity
+    const topCity = Object.entries(cityCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || ''
 
     return {
       totalHotels: hotels.length,
       totalUsers: users.length,
-      totalReservations: seed.stats.totalReservations,
+      totalReservations: reservations.length,
       monthlyRevenue: totalRevenue,
       activeManagers,
       pendingStaffRequests,
-      averageOccupancy: seed.stats.averageOccupancy,
-      cancellationRate: seed.stats.cancellationRate,
+      averageOccupancy: 0,
+      cancellationRate: 0,
       averageRating: Number(avgRating.toFixed(1)),
-      newUsersThisMonth: seed.stats.newUsersThisMonth,
+      newUsersThisMonth: 0,
       topCity,
-      topHotel: topHotel?.name || seed.stats.topHotel,
+      topHotel: topHotel?.name || '',
     }
-  }, [hotels, reservations, seed.stats, staff, users])
+  }, [hotels, reservations, staff, users])
 
   const recentReservations = useMemo(
     () => [...filteredReservations].sort((a, b) => Number(b.id) - Number(a.id)).slice(0, 6),
@@ -249,7 +294,7 @@ export default function AdminDashboardPage() {
       }))
       .filter(item => item.value > 0)
   }, [filteredReservations])
-  const monthlyRevenueBars = seed.analytics.monthlyRevenue
+  const monthlyRevenueBars = []
   const topHotelBars = useMemo(
     () => [...hotels]
       .sort((a, b) => Number(b.monthly_revenue || 0) - Number(a.monthly_revenue || 0))

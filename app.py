@@ -9,7 +9,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from db import get_connection
 
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='frontend/dist/assets', static_url_path='/assets')
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "local-dev-secret-key")
 
 
@@ -1235,6 +1235,51 @@ def admin_stats():
     return jsonify(stats)
 
 
+@app.route("/api/admin/reservations", methods=["GET"])
+def admin_get_reservations():
+    err = require_admin()
+    if err: return err
+    reservations = run_query(
+        """SELECT r.*, h.hotel_name, rm.room_type, rm.room_number,
+                  u.name as user_name, u.email as user_email
+           FROM reservations r
+           LEFT JOIN hotels h ON r.hotel_id = h.id
+           LEFT JOIN rooms rm ON r.room_id = rm.id
+           LEFT JOIN users u ON r.user_id = u.id
+           ORDER BY r.created_at DESC""",
+        fetchall=True,
+    )
+    return jsonify(reservations or [])
+
+
+@app.route("/api/admin/reservations/<int:reservation_id>", methods=["PUT"])
+def admin_update_reservation(reservation_id):
+    err = require_admin()
+    if err: return err
+    data = request.get_json() or {}
+    status = data.get("status")
+    if status not in ("CONFIRMED", "CANCELLED"):
+        return jsonify(success=False, message="Invalid status."), 400
+    run_query("UPDATE reservations SET status=%s WHERE id=%s", (status, reservation_id), commit=True)
+    return jsonify(success=True, message="Reservation updated.")
+
+
+@app.route("/api/admin/staff", methods=["GET"])
+def admin_get_staff():
+    err = require_admin()
+    if err: return err
+    staff = run_query(
+        """SELECT u.id, u.name, u.email, u.role, u.phone, u.created_at,
+                  h.hotel_name as assigned_hotel
+           FROM users u
+           LEFT JOIN hotels h ON u.hotel_id = h.id
+           WHERE u.role IN ('ADMIN', 'HOTEL_MANAGER')
+           ORDER BY u.role, u.name""",
+        fetchall=True,
+    )
+    return jsonify(staff or [])
+
+
 @app.route("/api/cities")
 def get_cities():
     cities = run_query(
@@ -1268,16 +1313,16 @@ def get_hotels_context():
 
 
 def query_ollama(user_message, context):
-    system = f"""Sen Book Hotel sitesinin Kıbrıs otel asistanısın.
-Kullanıcıya kısa, samimi ve yardımcı cevaplar ver. Maksimum 2-3 cümle.
-Türkçe veya İngilizce konuş, kullanıcının diline göre.
+    system = f"""You are a Cyprus hotel assistant for Book Hotel.
+Give short, friendly and helpful answers in English only. Maximum 2-3 sentences.
+Always respond in English regardless of the language the user uses.
 
-Mevcut oteller:
+Available hotels:
 {context}"""
 
     payload = {
         "model":   OLLAMA_MODEL,
-        "prompt":  f"System: {system}\n\nKullanıcı: {user_message}\n\nAsistan:",
+        "prompt":  f"System: {system}\n\nUser: {user_message}\n\nAssistant:",
         "stream":  False,
         "options": {"temperature": 0.7, "num_predict": 200},
     }
@@ -1337,7 +1382,7 @@ def chatbot():
     data    = request.get_json() or {}
     message = (data.get("message") or "").strip()
     if not message:
-        return jsonify(reply="Kıbrıs'ta otel bulmana yardımcı olabilirim! 🏨", hotels=[])
+        return jsonify(reply="I can help you find a hotel in Cyprus! 🏨", hotels=[])
 
     context  = get_hotels_context()
     ai_reply = query_ollama(message, context)
@@ -1345,15 +1390,15 @@ def chatbot():
     if not ai_reply:
         msg = message.lower()
         if any(w in msg for w in ["merhaba","hello","hi","selam"]):
-            ai_reply = "Merhaba! Kıbrıs otel asistanınım. Hangi şehirde otel arıyorsunuz? 😊"
+            ai_reply = "Hello! I'm your Cyprus hotel assistant. Which city are you looking for a hotel in? 😊"
         elif any(w in msg for w in ["girne","kyrenia"]):
-            ai_reply = "Girne'de harika plaj ve resort oteller var! İşte önerilerim:"
+            ai_reply = "Kyrenia has amazing beach and resort hotels! Here are my recommendations:"
         elif any(w in msg for w in ["iskele","limak","concorde"]):
-            ai_reply = "İskele bölgesinde lüks all-inclusive oteller mevcut!"
+            ai_reply = "The Iskele region has excellent luxury all-inclusive hotels!"
         elif any(w in msg for w in ["ucuz","cheap","budget"]):
-            ai_reply = "Uygun fiyatlı Kıbrıs otelleri buldum:"
+            ai_reply = "I found some budget-friendly Cyprus hotels for you:"
         else:
-            ai_reply = "Kıbrıs'ın en popüler otellerini sizin için listeledim:"
+            ai_reply = "Here are the most popular hotels in Cyprus for you:"
 
     hotels = detect_hotels(message)
     return jsonify(reply=ai_reply, hotels=hotels)
@@ -1368,8 +1413,12 @@ def chatbot_status():
             return jsonify(online=True, models=models)
     except Exception:
         pass
-    return jsonify(online=False, message="Ollama çalışmıyor.")
+    return jsonify(online=False, message="Ollama is not running.")
 
 
 if __name__ == "__main__":
     app.run(debug=True, host="127.0.0.1", port=int(os.environ.get("PORT", 5050)))
+
+@app.route("/<path:path>")
+def catch_all(path):
+    return render_template("index.html")

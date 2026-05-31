@@ -73,6 +73,12 @@ export const adminAddHotel = (data) => postJSON('/api/admin/hotels', data)
 export const adminDeleteHotel = (id) => requestJSON('/api/admin/hotels/' + id, { method: 'DELETE' })
 export const adminGetUsers = () => requestJSON('/api/admin/users')
 
+// Admin extended
+export const adminGetReservations = () => requestJSON('/api/admin/reservations')
+export const adminUpdateReservation = (id, data) => postJSON('/api/admin/reservations/' + id, data, 'PUT')
+export const adminGetStaff = () => requestJSON('/api/admin/staff')
+export const adminGetStats = () => requestJSON('/api/admin/stats')
+
 // Manager
 export const managerGetStats = () => requestJSON('/api/manager/stats')
 export const managerGetReservations = () => requestJSON('/api/manager/reservations')
