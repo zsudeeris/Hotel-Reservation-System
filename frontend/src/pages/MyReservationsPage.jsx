@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, XCircle, CheckCircle, Clock } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import { getReservations, cancelReservation } from '../services/api.js'
+import { getHotelDetailPath } from '../utils/hotelRouting.js'
 import { useToast } from '../hooks/useToast.js'
 
 const STATUS_COLORS = {
@@ -13,6 +14,7 @@ const STATUS_COLORS = {
 
 export default function MyReservationsPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { showToast } = useToast()
   const [reservations, setReservations] = useState([])
   const [loading, setLoading] = useState(true)
@@ -44,6 +46,17 @@ export default function MyReservationsPage() {
   }
 
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const parseAllocations = (value) => {
+    if (!value) return []
+    if (Array.isArray(value)) return value
+    if (typeof value !== 'string') return []
+    try {
+      const parsed = JSON.parse(value)
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  }
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -72,6 +85,7 @@ export default function MyReservationsPage() {
               const status = (res.status || 'confirmed').toLowerCase()
               const sc = STATUS_COLORS[status] || STATUS_COLORS.pending
               const StatusIcon = sc.icon
+              const allocations = parseAllocations(res.room_allocations)
               return (
                 <div key={res.id} style={{ background: 'var(--white)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-sm)', padding: '22px 26px', border: '1px solid var(--border)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
@@ -115,10 +129,27 @@ export default function MyReservationsPage() {
                     </div>
                   </div>
 
+                  {allocations.length > 0 && (
+                    <div style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)' }}>Room allocations</div>
+                      {allocations.map((allocation, index) => (
+                        <div key={`${res.id}-allocation-${index}`} style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', fontSize: 12.5, color: 'var(--sub)', lineHeight: 1.5 }}>
+                          <strong style={{ color: 'var(--text)' }}>Room {index + 1}:</strong> {allocation.adults || 0} adult{(allocation.adults || 0) !== 1 ? 's' : ''}
+                          {allocation.children ? `, ${allocation.children} child${allocation.children !== 1 ? 'ren' : ''}` : ''}
+                          {' · '}
+                          {allocation.room_type || allocation.room?.room_type || 'Room'}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   {status !== 'cancelled' && (
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button
-                        onClick={() => navigate(`/hotels/${res.hotel_id || res.hotel?.id}`)}
+                        onClick={() => {
+                          const hotelPath = getHotelDetailPath({ id: res.hotel_id || res.hotel?.id }, location.search)
+                          if (hotelPath) navigate(hotelPath)
+                        }}
                         style={{ padding: '9px 20px', border: '1.5px solid var(--border)', borderRadius: 9, background: 'var(--white)', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--text)' }}
                       >
                         View Hotel

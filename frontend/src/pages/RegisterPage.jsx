@@ -48,6 +48,11 @@ export default function RegisterPage() {
         <div className="auth-card">
           <h1>Create Account</h1>
           <p className="auth-sub">Join thousands of travelers discovering Northern Cyprus</p>
+          <div className="demo-auth-box">
+            <div className="demo-auth-title">Demo credentials</div>
+            <div className="demo-auth-row"><span>Email</span><code>demo@bookhotel.com</code></div>
+            <div className="demo-auth-row"><span>Password</span><code>Demo123!</code></div>
+          </div>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div className="field">

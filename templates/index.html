@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lucide@0.438.0/dist/umd/lucide.min.js"></script>
-<link rel="stylesheet" href="/static/style.css?v=3">
-<script>window.__buildVer=3;</script>
+<link rel="stylesheet" href="/static/style.css?v=6">
+<script>window.__buildVer=6;</script>
 </head>
 <body>
 <div id="toastContainer" style="position:fixed;top:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none"></div>
@@ -40,24 +40,21 @@
 
       <!-- Search bar -->
       <div class="lsearch">
-        <div class="lsearch-field" style="flex:1.6">
+        <div class="lsearch-field">
           <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg> Destination</label>
           <input type="text" id="ldestInput" placeholder="Where are you going?" autocomplete="off">
         </div>
-        <div class="lsearch-divider"></div>
         <div class="lsearch-field">
           <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-in</label>
           <div class="dp-trigger" onclick="openDp('lcheckin','lcheckout')"><span class="dp-val muted" id="lcheckin_d">Add date</span></div>
           <input type="hidden" id="lcheckin">
         </div>
-        <div class="lsearch-divider"></div>
         <div class="lsearch-field">
           <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Check-out</label>
           <div class="dp-trigger" onclick="openDp('lcheckout','lcheckin')"><span class="dp-val muted" id="lcheckout_d">Add date</span></div>
           <input type="hidden" id="lcheckout">
         </div>
-        <div class="lsearch-divider"></div>
-        <div class="lsearch-field" style="flex:.8;position:relative">
+        <div class="lsearch-field" style="position:relative">
           <label><svg class="lbl-ico" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Guests</label>
           <div id="lguestDisplay" class="dp-trigger" onclick="toggleLGuestPicker()" style="color:var(--muted)">Add guests</div>
           <div id="lguestPicker" style="display:none;position:fixed;background:var(--white);border:1.5px solid var(--border);border-radius:14px;box-shadow:0 8px 32px rgba(0,0,0,.15);padding:18px;width:240px;z-index:2000">
@@ -191,6 +188,11 @@
       <form class="auth-card" onsubmit="submitRegister(event)">
         <h1>Create Account</h1>
         <p class="auth-sub">Register securely with 2FA verification.</p>
+        <div class="demo-auth-box">
+          <div class="demo-auth-title">Demo credentials</div>
+          <div class="demo-auth-row"><span>Email</span><code>demo@bookhotel.com</code></div>
+          <div class="demo-auth-row"><span>Password</span><code>Demo123!</code></div>
+        </div>
         <div class="field">
           <input type="text" id="regName" placeholder="Full Name">
         </div>
@@ -204,15 +206,16 @@
         </div>
         <div class="field">
           <input type="password" id="regConfirm" placeholder="Confirm Password">
-          <div class="fhint">Must include 8+ chars, 1 uppercase &amp; number</div>
+          <div class="fhint">Must include 6+ chars. Uppercase and number are recommended.</div>
         </div>
         <div class="field">
           <input type="tel" id="regPhone" placeholder="Phone Number">
         </div>
+        <div class="ferr" id="registerErr"></div>
         <button class="btn-primary" type="submit">Create Account</button>
         <div class="auth-switch">Have an account? <a href="#" onclick="showPage('loginPage')">Sign In</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
-        <div class="auth-foot">2FA code will be sent by email or SMS.</div>
+        <div class="auth-foot">Demo only: 2FA code is shown on screen during testing.</div>
       </form>
     </div>
   </div>
@@ -228,18 +231,23 @@
       <form class="auth-card" onsubmit="submitLogin(event)">
         <h1>Sign In</h1>
         <p class="auth-sub">Access your account securely with 2FA verification.</p>
+        <div class="demo-auth-box">
+          <div class="demo-auth-title">Demo credentials</div>
+          <div class="demo-auth-row"><span>Email</span><code>demo@bookhotel.com</code></div>
+          <div class="demo-auth-row"><span>Password</span><code>Demo123!</code></div>
+        </div>
         <div class="field">
           <input type="email" id="loginEmail" placeholder="E-mail">
         </div>
         <div class="field">
           <input type="password" id="loginPassword" placeholder="Password">
-          <div class="ferr" id="loginErr">Invalid email or password!</div>
-          <a href="#" class="forgot">Forgot Password?</a>
+        <div class="ferr" id="loginErr">Invalid email or password!</div>
+        <a href="#" class="forgot">Forgot Password?</a>
         </div>
         <button class="btn-primary" type="submit">Sign In</button>
         <div class="auth-switch">Don't have an account? <a href="#" onclick="showPage('registerPage')">Sign Up</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
-        <div class="auth-foot">2FA code will be sent by email or SMS.</div>
+        <div class="auth-foot">Demo only: 2FA code is shown on screen during testing.</div>
       </form>
     </div>
   </div>
@@ -265,7 +273,7 @@
         <button class="btn-primary" type="button" style="background:var(--text);margin-top:8px" onclick="showPage('staffRegisterPage')">Create Staff Account</button>
         <div class="auth-switch"><a href="#" onclick="showPage('loginPage')">Customer Login</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
-        <div class="auth-foot">Admin / Hotel Manager accounts only.</div>
+        <div class="auth-foot">Demo only: 2FA code is shown on screen during testing.</div>
       </form>
     </div>
   </div>
@@ -278,13 +286,18 @@
       <form class="auth-card" onsubmit="verify2FA(event)">
         <h1>Verify Your Account</h1>
         <p class="twofa-sub" id="twofaMessage">We sent a 6-digit verification code to your email or phone.</p>
+        <div class="demo-auth-box demo-twofa-box">
+          <div class="demo-auth-title">Demo 2FA Code</div>
+          <div class="demo-auth-row"><span>Code</span><code id="twofaCodePreview">------</code></div>
+          <div class="demo-auth-note">Demo only: showing 2FA code on screen. Do not use in production.</div>
+        </div>
         <div class="field">
           <input type="text" id="twofaCode" placeholder="Enter the 6-digit code" maxlength="6">
           <div class="ferr" id="twofaErr">Invalid or expired code</div>
         </div>
         <button class="btn-primary" type="submit">Verify Code</button>
         <div class="twofa-resend">Didn't receive the code? <a href="#" onclick="resendCode(event)">Resend</a></div>
-        <div class="twofa-timer">Code expires in <b id="twofaTimer">01:30</b></div>
+        <div class="twofa-timer">Code expires in <b id="twofaTimer">05:00</b></div>
       </form>
     </div>
   </div>
@@ -325,7 +338,7 @@
     <!-- Search Bar -->
     <div class="search-wrap">
       <div class="search-bar">
-        <div class="sbar-field" style="flex:1.4">
+        <div class="sbar-field">
           <label>Destination</label>
           <input type="text" id="searchDest" placeholder="Where are you going?" autocomplete="off">
         </div>
@@ -469,7 +482,7 @@
       <div class="s-lbl">Guests</div>
       <div class="s-inp-wrap">
         <span class="s-ico"><i data-lucide="users"></i></span>
-        <button class="s-inp s-trigger" id="sGuestDisplay" type="button" onclick="toggleSearchGuestPicker()">2 adults, 1 room</button>
+        <button class="s-inp s-trigger" id="sGuestDisplay" type="button" onclick="toggleSearchGuestPicker()" style="color:var(--muted)">Add guests</button>
         <div id="sGuestPicker" class="s-guest-picker" style="display:none" onclick="event.stopPropagation()">
           <div class="s-guest-row">
             <span>Guests</span>
@@ -575,32 +588,11 @@
       </div>
       <div class="db-field" style="position:relative">
         <label>Guests &amp; rooms</label>
-        <button class="db-guest-trigger" id="detailGuestDisplay" onclick="toggleDetailGuestPicker()">2 adults, 1 room</button>
+        <button class="db-guest-trigger" id="detailGuestDisplay" onclick="toggleDetailGuestPicker()">Add guests</button>
         <div id="detailGuestPicker" class="detail-guest-picker" style="display:none" onclick="event.stopPropagation()">
-          <div class="detail-guest-row">
-            <span>Adults</span>
-            <div class="detail-guest-controls">
-              <button onclick="changeDetailGuests('adults',-1)">−</button>
-              <strong id="detailAdultsCount">2</strong>
-              <button onclick="changeDetailGuests('adults',1)">+</button>
-            </div>
-          </div>
-          <div class="detail-guest-row">
-            <span>Children</span>
-            <div class="detail-guest-controls">
-              <button onclick="changeDetailGuests('children',-1)">−</button>
-              <strong id="detailChildrenCount">0</strong>
-              <button onclick="changeDetailGuests('children',1)">+</button>
-            </div>
-          </div>
-          <div class="detail-guest-row">
-            <span>Rooms</span>
-            <div class="detail-guest-controls">
-              <button onclick="changeDetailGuests('rooms',-1)">−</button>
-              <strong id="detailRoomsCount">1</strong>
-              <button onclick="changeDetailGuests('rooms',1)">+</button>
-            </div>
-          </div>
+          <div class="detail-room-summary" id="detailRoomSummary"></div>
+          <div id="detailRoomPlansList"></div>
+          <button class="detail-room-add" type="button" onclick="addDetailRoom()">Add another room</button>
           <button class="detail-guest-done" onclick="toggleDetailGuestPicker()">Done</button>
         </div>
       </div>
@@ -651,7 +643,7 @@
           <div>
             <div class="detail-score-txt">Excellent</div>
           </div>
-          <button class="detail-comments-link" onclick="toggleAllComments()">See all comments</button>
+          <button class="detail-comments-link" onclick="toggleAllComments()">See All Reviews</button>
         </div>
       </div>
 
@@ -660,6 +652,7 @@
         <div class="booking-side-title">Select Room</div>
         <select class="room-sel"><option>2 adults, 1 room</option></select>
         <div class="booking-side-title">Select Date</div>
+        <div id="detailBookingError" class="ferr" style="margin:8px 0 4px"></div>
         <div class="cal-nav-row">
           <button class="cal-nav-btn" onclick="bookingCalNav(-1)">‹</button>
           <span class="cal-month-lbl" id="bookingCalMonth">Select dates</span>
@@ -687,7 +680,7 @@
     </div>
 
     <!-- Reviews -->
-    <h2 class="rooms-sec-title">Guest Reviews</h2>
+    <h2 class="rooms-sec-title">Recent Reviews</h2>
     <div id="reviewsList">
       <!-- Dinamik yüklenir -->
     </div>
@@ -1462,6 +1455,11 @@
       <form class="auth-card admin-auth-card" onsubmit="submitStaffRegister(event)">
         <h1>Create Staff Account</h1>
         <p class="auth-sub">Register as Admin or Hotel Manager with 2FA.</p>
+        <div class="demo-auth-box">
+          <div class="demo-auth-title">Demo credentials</div>
+          <div class="demo-auth-row"><span>Email</span><code>demo@bookhotel.com</code></div>
+          <div class="demo-auth-row"><span>Password</span><code>Demo123!</code></div>
+        </div>
         <div class="field">
           <input type="text" id="staffName" placeholder="Full Name">
         </div>
@@ -1486,7 +1484,7 @@
         <button class="btn-primary" type="submit">Create Staff Account</button>
         <div class="auth-switch">Already have an account? <a href="#" onclick="showPage('adminLoginPage')">Sign In</a></div>
         <div class="auth-switch"><a href="#" onclick="showPage('mainMenuPage')">Back to Main Menu</a></div>
-        <div class="auth-foot">2FA code will appear after registration.</div>
+        <div class="auth-foot">Demo only: 2FA code is shown on screen during testing.</div>
       </form>
     </div>
   </div>
@@ -1526,7 +1524,7 @@
   </div>
 </div>
 
-<script src="/static/script.js?v=3"></script>
+<script src="/static/script.js?v=6"></script>
 
 <!-- Custom date picker panel (shared) -->
 <div id="customDp" class="custom-dp" style="display:none" onclick="event.stopPropagation()"></div>

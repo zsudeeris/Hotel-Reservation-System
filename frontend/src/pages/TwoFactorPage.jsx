@@ -6,12 +6,12 @@ import { resend2FA } from '../services/api.js'
 
 export default function TwoFactorPage() {
   const navigate = useNavigate()
-  const { verify2FA, pendingEmail } = useAuth()
+  const { verify2FA, pendingEmail, pendingCode, setPendingCode } = useAuth()
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
-  const [timer, setTimer] = useState(120)
+  const [timer, setTimer] = useState(300)
   const inputs = useRef([])
 
   useEffect(() => {
@@ -67,8 +67,9 @@ export default function TwoFactorPage() {
   const handleResend = async () => {
     setResending(true)
     try {
-      await resend2FA()
-      setTimer(120)
+      const data = await resend2FA()
+      setPendingCode(data?.debug_code || null)
+      setTimer(data?.expires_in || 300)
       setCode(['', '', '', '', '', ''])
       setError('')
     } catch {
@@ -91,9 +92,17 @@ export default function TwoFactorPage() {
         <div className="auth-card">
           <h1>Verify Your Identity</h1>
           <p className="twofa-sub">
-            We sent a 6-digit code to<br />
+            Demo mode only. Use the code shown below to continue.<br />
             <strong>{pendingEmail || 'your email'}</strong>
           </p>
+          <div className="demo-auth-box demo-twofa-box">
+            <div className="demo-auth-title">Demo 2FA Code</div>
+            <div className="demo-auth-row">
+              <span>Code</span>
+              <code>{pendingCode || '------'}</code>
+            </div>
+            <div className="demo-auth-note">Demo only: showing 2FA code on screen. Do not use in production.</div>
+          </div>
           <form onSubmit={handleSubmit}>
             <div style={{ display: 'flex', gap: 10, justifyContent: 'center', marginBottom: 20 }} onPaste={handlePaste}>
               {code.map((digit, idx) => (

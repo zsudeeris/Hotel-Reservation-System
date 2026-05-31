@@ -3,15 +3,17 @@ import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Calendar, Home } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
+import { getNights, normalizeRoomSelections, normalizeRoomPlans, roomPlanTotals } from '../utils/bookingState.js'
 
 export default function PaymentSuccessPage() {
   const navigate = useNavigate()
-  const { selectedHotel, selectedRoom, dateState, reservationId, totalPrice } = useBooking()
+  const { selectedHotel, selectedRoom, dateState, roomPlans, roomSelections, reservationId, totalPrice, guestState } = useBooking()
 
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-  const nights = dateState?.checkin && dateState?.checkout
-    ? Math.max(1, Math.round((new Date(dateState.checkout) - new Date(dateState.checkin)) / (1000 * 60 * 60 * 24)))
-    : 1
+  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const resolvedRoomPlans = normalizeRoomPlans(roomPlans || [{ adults: guestState?.adults || 2, children: guestState?.children || 0 }])
+  const totals = roomPlanTotals(resolvedRoomPlans)
+  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -45,7 +47,23 @@ export default function PaymentSuccessPage() {
             </div>
             <div className="confirm-row">
               <span className="confirm-row-lbl">Room</span>
-              <span className="confirm-row-val">{selectedRoom?.room_type || selectedRoom?.name || 'Standard Room'}</span>
+              <span className="confirm-row-val">
+                {resolvedRoomSelections.length
+                  ? resolvedRoomSelections.map((selection, index) => `Room ${index + 1}: ${selection.room?.room_type || selection.roomType || 'Unavailable'}`).join(' · ')
+                  : selectedRoom?.room_type || selectedRoom?.name || 'Standard Room'}
+              </span>
+            </div>
+            <div className="confirm-row">
+              <span className="confirm-row-lbl">Rooms / Guests</span>
+              <span className="confirm-row-val">{totals.roomCount} rooms, {totals.totalGuests} guests</span>
+            </div>
+            <div className="confirm-row">
+              <span className="confirm-row-lbl">Room Breakdown</span>
+              <span className="confirm-row-val">
+                {resolvedRoomSelections.length
+                  ? resolvedRoomSelections.map((room, index) => `Room ${index + 1}: ${room.adults} adult${room.adults !== 1 ? 's' : ''}${room.children ? `, ${room.children} child${room.children !== 1 ? 'ren' : ''}` : ''} — ${room.room?.room_type || room.roomType || 'Unavailable'}`).join(' · ')
+                  : '1 room, 2 adults'}
+              </span>
             </div>
             <div className="confirm-row">
               <span className="confirm-row-lbl">Check-in</span>

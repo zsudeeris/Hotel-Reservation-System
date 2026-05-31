@@ -24,6 +24,7 @@ import ProfilePage from './pages/ProfilePage.jsx'
 import AdminDashboardPage from './pages/AdminDashboardPage.jsx'
 import ManagerDashboardPage from './pages/ManagerDashboardPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
+import AppErrorBoundary from './components/AppErrorBoundary.jsx'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
@@ -42,12 +43,12 @@ function RequireRole({ children, roles }) {
 
 function PublicOnlyRoute({ children }) {
   const { user, loading } = useAuth()
-  if (loading) return <div className="page-loading">Loading...</div>
   if (user) {
     if (user.role === 'ADMIN') return <Navigate to="/admin" replace />
     if (user.role === 'HOTEL_MANAGER') return <Navigate to="/manager" replace />
     return <Navigate to="/home" replace />
   }
+  if (loading) return children
   return children
 }
 
@@ -90,7 +91,9 @@ export default function App() {
       <AuthProvider>
         <WishlistProvider>
           <BookingProvider>
-            <AppRoutes />
+            <AppErrorBoundary>
+              <AppRoutes />
+            </AppErrorBoundary>
             <Toast />
           </BookingProvider>
         </WishlistProvider>

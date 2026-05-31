@@ -1,15 +1,15 @@
 import React from 'react'
-import { Users, Maximize } from 'lucide-react'
+import { Check, Users, Maximize } from 'lucide-react'
 
-export default function RoomCard({ room, onBook, nights = 1 }) {
+export default function RoomCard({ room, onBook, nights = 1, roomCount = 1, selected = false, buttonLabel = 'Book Now', disabled = false }) {
   const price = room.price_per_night || room.price || 0
-  const total = price * (nights || 1)
+  const total = price * (nights || 1) * Math.max(1, roomCount || 1)
 
   return (
-    <div className="room-row">
+    <div className={`room-row${selected ? ' room-row--selected' : ''}`}>
       <img
         className="room-row-img"
-        src={room.image_url || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80'}
+        src={room.image_url || room.img || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80'}
         alt={room.room_type || room.name}
         onError={e => { e.target.src = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=400&q=80' }}
       />
@@ -35,11 +35,17 @@ export default function RoomCard({ room, onBook, nights = 1 }) {
         )}
       </div>
       <div className="room-row-right">
+        {selected && (
+          <div className="room-selected-badge">
+            <Check style={{ width: 12, height: 12 }} />
+            Selected
+          </div>
+        )}
         <div className="room-nights-lbl">{nights > 1 ? `${nights} nights` : '1 night'}</div>
         <div className="room-price-main">${total}</div>
-        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>${price}/night</div>
-        <button className="btn-book-now" onClick={() => onBook(room)}>
-          Book Now
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>${price}/night · {Math.max(1, roomCount || 1)} room{Math.max(1, roomCount || 1) > 1 ? 's' : ''}</div>
+        <button className="btn-book-now" onClick={() => onBook(room)} disabled={disabled}>
+          {buttonLabel}
         </button>
       </div>
     </div>

@@ -1,16 +1,21 @@
 import React from 'react'
 import { useBooking } from '../context/BookingContext.jsx'
+import { getHotelName } from '../utils/hotelRouting.js'
+import { getNights, normalizeRoomSelections, normalizeRoomPlans, roomPlanTotals, roomSelectionTotals } from '../utils/bookingState.js'
 
 export default function BookingSummary({ showTotal = true }) {
-  const { selectedHotel, selectedRoom, dateState, guestState, totalPrice } = useBooking()
+  const { selectedHotel, dateState, guestState, roomPlans, roomSelections } = useBooking()
 
   const checkin = dateState?.checkin ? new Date(dateState.checkin) : null
   const checkout = dateState?.checkout ? new Date(dateState.checkout) : null
-  const nights = checkin && checkout ? Math.max(1, Math.round((checkout - checkin) / (1000 * 60 * 60 * 24))) : 1
-  const pricePerNight = selectedRoom?.price_per_night || selectedRoom?.price || 0
-  const roomTotal = pricePerNight * nights
-  const taxes = Math.round(roomTotal * 0.1)
-  const grandTotal = roomTotal + taxes
+  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const resolvedRoomPlans = normalizeRoomPlans(roomPlans || [{ adults: guestState?.adults || 2, children: guestState?.children || 0 }])
+  const totals = roomPlanTotals(resolvedRoomPlans)
+  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const calculated = roomSelectionTotals(resolvedRoomSelections, nights)
+  const roomTotal = calculated.roomTotal
+  const taxes = calculated.taxes
+  const grandTotal = calculated.grandTotal
 
   const fmt = (d) => d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
@@ -24,8 +29,8 @@ export default function BookingSummary({ showTotal = true }) {
               <div className="order-score-txt">{selectedHotel.score >= 9 ? 'Exceptional' : 'Excellent'}</div>
             </div>
           </div>
-          <div className="order-hotel-name">{selectedHotel.name}</div>
-          <div className="order-hotel-loc">{selectedHotel.city}, Northern Cyprus</div>
+          <div className="order-hotel-name">{getHotelName(selectedHotel)}</div>
+          <div className="order-hotel-loc">{selectedHotel.city || selectedHotel.district || 'Northern Cyprus'}</div>
         </>
       )}
 
@@ -35,28 +40,56 @@ export default function BookingSummary({ showTotal = true }) {
       <div className="order-checkin">{nights} night{nights !== 1 ? 's' : ''}</div>
 
       <div className="order-guests-row">
-        {guestState?.adults || 2} Adults, {guestState?.children || 0} Children · {guestState?.rooms || 1} Room
+        {totals.roomCount} Room{totals.roomCount !== 1 ? 's' : ''} · {totals.totalGuests} Guest{totals.totalGuests !== 1 ? 's' : ''}
       </div>
 
-      {selectedRoom && (
+      <div style={{ display: 'grid', gap: 8, marginBottom: 14 }}>
+        {resolvedRoomSelections.length ? resolvedRoomSelections.map((selection, index) => (
+          <div key={`room-plan-${index}`} style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 4, color: 'var(--text)' }}>Room {index + 1}</div>
+            <div style={{ fontSize: 12, color: 'var(--sub)' }}>
+              {selection.adults} adult{selection.adults !== 1 ? 's' : ''}{selection.children ? `, ${selection.children} child${selection.children !== 1 ? 'ren' : ''}` : ''}
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 4, fontWeight: 600 }}>
+              {selection.room?.room_type || selection.roomType || 'Unavailable'}
+            </div>
+          </div>
+        )) : (
+          <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '10px 12px', border: '1px solid var(--border)', fontSize: 12, color: 'var(--sub)' }}>
+            1 room · 2 adults
+          </div>
+        )}
+      </div>
+
+      {resolvedRoomSelections.length === 1 && resolvedRoomSelections[0]?.room ? (
         <div className="order-room-row">
           <img
             className="order-room-img"
-            src={selectedRoom.image_url || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80'}
-            alt={selectedRoom.room_type || 'Room'}
+            src={resolvedRoomSelections[0].room.image_url || resolvedRoomSelections[0].room.img || 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80'}
+            alt={resolvedRoomSelections[0].room.room_type || 'Room'}
             onError={e => { e.target.src = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=200&q=80' }}
           />
           <div>
-            <div className="order-room-name">{selectedRoom.room_type || selectedRoom.name}</div>
-            <div className="order-room-tag">Up to {selectedRoom.capacity || 2} guests</div>
+            <div className="order-room-name">{resolvedRoomSelections[0].room.room_type || resolvedRoomSelections[0].room.name}</div>
+            <div className="order-room-tag">Up to {resolvedRoomSelections[0].room.capacity || 2} guests</div>
           </div>
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: 'var(--sub)', marginBottom: 12, lineHeight: 1.5 }}>
+          {resolvedRoomSelections.length > 0
+            ? resolvedRoomSelections.map((selection, index) => (
+              <div key={`selection-summary-${index}`} style={{ marginBottom: 4 }}>
+                Room {index + 1}: {selection.room?.room_type || selection.roomType || 'Unavailable'}
+              </div>
+            ))
+            : null}
         </div>
       )}
 
       {showTotal && (
         <>
           <div className="price-line">
-            <span className="price-lbl">${pricePerNight} × {nights} nights</span>
+            <span className="price-lbl">Selected rooms × {nights} nights</span>
             <span className="price-curr">${roomTotal}</span>
           </div>
           <div className="price-line">

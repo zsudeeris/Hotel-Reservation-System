@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { Building2, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  if (user) { navigate('/home'); return null }
+  if (user) return <Navigate to="/home" replace />
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -43,6 +43,11 @@ export default function LoginPage() {
         <div className="auth-card">
           <h1>Welcome Back</h1>
           <p className="auth-sub">Sign in to access your bookings and exclusive deals</p>
+          <div className="demo-auth-box">
+            <div className="demo-auth-title">Demo credentials</div>
+            <div className="demo-auth-row"><span>Email</span><code>demo@bookhotel.com</code></div>
+            <div className="demo-auth-row"><span>Password</span><code>Demo123!</code></div>
+          </div>
           <form onSubmit={handleSubmit}>
             <div className="field">
               <input

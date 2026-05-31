@@ -1,11 +1,13 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Heart, MapPin, Trash2 } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import { useWishlist } from '../context/WishlistContext.jsx'
+import { getHotelDetailPath, getHotelName } from '../utils/hotelRouting.js'
 
 export default function WishlistPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { favorites, remove } = useWishlist()
 
   return (
@@ -33,18 +35,21 @@ export default function WishlistPage() {
               <div
                 key={hotel.id}
                 style={{ background: 'var(--white)', borderRadius: 'var(--r-lg)', boxShadow: 'var(--shadow-sm)', display: 'flex', overflow: 'hidden', border: '1px solid var(--border)', cursor: 'pointer', transition: 'box-shadow .2s' }}
-                onClick={() => navigate(`/hotels/${hotel.id}`)}
+                onClick={() => {
+                  const hotelPath = getHotelDetailPath(hotel, location.search)
+                  if (hotelPath) navigate(hotelPath)
+                }}
               >
                 <img
                   src={hotel.image_url || 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=300&q=80'}
-                  alt={hotel.name}
+                  alt={getHotelName(hotel)}
                   style={{ width: 200, height: 140, objectFit: 'cover', flexShrink: 0 }}
                   onError={e => { e.target.src = 'https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=300&q=80' }}
                 />
                 <div style={{ flex: 1, padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 4 }}>{'★'.repeat(hotel.stars || 5)}</div>
-                    <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{hotel.name}</h3>
+                    <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{getHotelName(hotel)}</h3>
                     <div style={{ fontSize: 12, color: 'var(--sub)', display: 'flex', alignItems: 'center', gap: 4 }}>
                       <MapPin style={{ width: 12, height: 12 }} />
                       {hotel.city}, Northern Cyprus

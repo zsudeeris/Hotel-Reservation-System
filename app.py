@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+import json
 import os
 import random
 
@@ -11,7 +12,22 @@ from db import get_connection
 app = Flask(__name__)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "local-dev-secret-key")
 
+
+@app.after_request
+def add_cors_headers(response):
+    origin = request.headers.get("Origin")
+    if request.path.startswith("/api") and origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Vary"] = "Origin"
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type,Authorization,X-Requested-With"
+        response.headers["Access-Control-Allow-Methods"] = "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    return response
+
 TWO_FACTOR_MINUTES = 5
+DEMO_EMAIL = "demo@bookhotel.com"
+DEMO_PASSWORD = "Demo123!"
+DEMO_PASSWORD_HASH = "scrypt:32768:8:1$278nicAeLJJ1zdXU$b7e1cef33343bef205b0c9c81395d4efb889dfd815e7cde99527fa61d0839d73f489f92da7c61862ceac51ad2260fdd007bcf51cb3818cd4d89c4163a59fdc21"
 
 
 def generate_2fa_code():
@@ -50,6 +66,148 @@ def start_2fa_for_user(user_id, email):
     return code
 
 
+def ensure_demo_auth_seed():
+    try:
+        user = run_query("SELECT id FROM users WHERE email=%s", (DEMO_EMAIL,), fetchone=True)
+        if user:
+            return
+        run_query(
+            "INSERT INTO users (name, email, password, role, phone) VALUES (%s,%s,%s,'USER',NULL)",
+            ("Demo Guest", DEMO_EMAIL, DEMO_PASSWORD_HASH),
+            commit=True,
+        )
+    except Exception:
+        pass
+
+
+ensure_demo_auth_seed()
+
+
+def sync_hotel_review_stats():
+    try:
+        run_query(
+            """
+            UPDATE hotels h
+            LEFT JOIN (
+              SELECT
+                hotel_id,
+                ROUND(AVG(rating), 1) AS avg_rating,
+                COUNT(*) AS review_count
+              FROM reviews
+              GROUP BY hotel_id
+            ) r ON r.hotel_id = h.id
+            SET
+              h.score = COALESCE(r.avg_rating, h.score),
+              h.review_count = COALESCE(r.review_count, h.review_count),
+              h.reviews = CONCAT(COALESCE(r.review_count, h.review_count), ' reviews'),
+              h.label = CASE
+                WHEN COALESCE(r.avg_rating, h.score) >= 9.5 THEN 'Exceptional'
+                WHEN COALESCE(r.avg_rating, h.score) >= 8.5 THEN 'Excellent'
+                WHEN COALESCE(r.avg_rating, h.score) >= 7.5 THEN 'Very Good'
+                ELSE 'Good'
+              END
+            WHERE h.status='ACTIVE'
+            """,
+            commit=True,
+        )
+    except Exception:
+        pass
+
+
+def ensure_demo_review_seed():
+    try:
+        hotels = run_query(
+            "SELECT id, hotel_name, city, district, score FROM hotels WHERE status='ACTIVE'",
+            fetchall=True,
+        ) or []
+        if not hotels:
+            return
+
+        review_counts = run_query(
+            "SELECT hotel_id, COUNT(*) AS review_count FROM reviews GROUP BY hotel_id",
+            fetchall=True,
+        ) or []
+        counts = {row["hotel_id"]: int(row["review_count"] or 0) for row in review_counts if row.get("hotel_id") is not None}
+
+        for hotel in hotels:
+            hotel_id = hotel["id"]
+            target_count = 10 + ((hotel_id * 7) % 21)
+            existing_count = counts.get(hotel_id, 0)
+            needed = max(0, target_count - existing_count)
+            if needed <= 0:
+                continue
+
+            hotel_name = hotel.get("hotel_name") or "this hotel"
+            city = hotel.get("city") or "Northern Cyprus"
+            district = (hotel.get("district") or city or "Northern Cyprus").lower()
+            score = float(hotel.get("score") or 8.5)
+            names = ["A. Johnson", "M. Demir", "S. Kaya", "N. Brown", "L. Smith", "E. Clark", "D. Martin", "C. Lewis", "P. Taylor", "R. Wilson", "J. Patel", "T. Hughes"]
+            themes = [
+                "The room was clean and comfortable. Staff were very helpful.",
+                "Great location and beautiful pool area.",
+                "Breakfast was good, but check-in could be faster.",
+                "Excellent service, spacious rooms, and very good value.",
+                "Loved the sea view and the calm atmosphere.",
+                "The spa facilities were a real highlight of the stay.",
+                "Friendly staff and a smooth overall experience.",
+                "The hotel felt very family-friendly and well organized.",
+                "Parking was convenient and the lobby was welcoming.",
+                "A relaxing stay with good food and attentive service.",
+                "The casino and entertainment options were excellent.",
+                "We would definitely stay here again for the location alone.",
+            ]
+            rating_offsets = [-0.5, -0.3, -0.1, 0.0, 0.1, 0.2, 0.35, 0.45]
+            for index in range(needed):
+                reviewer_name = names[(hotel_id + index) % len(names)]
+                theme = themes[(hotel_id * 3 + index) % len(themes)]
+                rating = round(min(9.8, max(7.6, score + rating_offsets[(hotel_id + index) % len(rating_offsets)])), 1)
+                comment = f"{theme} We especially liked the {district} location at {hotel_name}."
+                run_query(
+                    """INSERT INTO reviews (hotel_id, reviewer_name, rating, comment, created_at)
+                       VALUES (%s,%s,%s,%s, DATE_SUB(NOW(), INTERVAL %s DAY))""",
+                    (hotel_id, reviewer_name, rating, comment, index + 1),
+                    commit=True,
+                )
+        sync_hotel_review_stats()
+    except Exception:
+        pass
+
+
+ensure_demo_review_seed()
+
+
+def ensure_reservation_special_requests_column():
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN special_requests TEXT DEFAULT NULL", commit=True)
+    except Exception:
+        pass
+
+
+ensure_reservation_special_requests_column()
+
+
+def ensure_reservation_room_plan_columns():
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN room_count INT DEFAULT 1", commit=True)
+    except Exception:
+        pass
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN total_adults INT DEFAULT 0", commit=True)
+    except Exception:
+        pass
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN total_children INT DEFAULT 0", commit=True)
+    except Exception:
+        pass
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN room_allocations TEXT DEFAULT NULL", commit=True)
+    except Exception:
+        pass
+
+
+ensure_reservation_room_plan_columns()
+
+
 # ── AUTH ─────────────────────────────────────────
 
 @app.route("/")
@@ -65,8 +223,8 @@ def register():
     name = (data.get("name") or email.split("@")[0] or "Guest").strip()
     phone = (data.get("phone") or "").strip()
 
-    if not email or "@" not in email or len(password) < 8:
-        return jsonify(success=False, message="Geçerli email ve güçlü şifre giriniz."), 400
+    if not email or "@" not in email or len(password) < 6:
+        return jsonify(success=False, message="Geçerli email ve en az 6 karakter şifre giriniz."), 400
 
     if run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True):
         return jsonify(success=False, message="Bu email zaten kayıtlı."), 409
@@ -77,7 +235,7 @@ def register():
     )
     user = run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True)
     code = start_2fa_for_user(user["id"], email)
-    return jsonify(success=True, message="Hesap oluşturuldu.", debug_code=code)
+    return jsonify(success=True, message="Hesap oluşturuldu.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
 
 
 @app.route("/api/login", methods=["POST"])
@@ -104,7 +262,7 @@ def login():
         return jsonify(success=False, message="Bu hesap admin veya hotel manager değil."), 403
 
     code = start_2fa_for_user(user["id"], email)
-    return jsonify(success=True, message="2FA kodu oluşturuldu.", debug_code=code)
+    return jsonify(success=True, message="2FA kodu oluşturuldu.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
 
 
 @app.route("/api/resend-2fa", methods=["POST"])
@@ -116,7 +274,7 @@ def resend_2fa():
     if not user:
         return jsonify(success=False, message="Kullanıcı bulunamadı."), 404
     code = start_2fa_for_user(user["id"], user["email"])
-    return jsonify(success=True, message="Yeni 2FA kodu oluşturuldu.", debug_code=code)
+    return jsonify(success=True, message="Yeni 2FA kodu oluşturuldu.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
 
 
 @app.route("/api/verify-2fa", methods=["POST"])
@@ -191,7 +349,7 @@ def register_staff():
     )
     user = run_query("SELECT id FROM users WHERE email=%s", (email,), fetchone=True)
     code = start_2fa_for_user(user["id"], email)
-    return jsonify(success=True, message="Staff account created.", debug_code=code)
+    return jsonify(success=True, message="Staff account created.", debug_code=code, expires_in=TWO_FACTOR_MINUTES * 60)
 
 
 @app.route("/api/reviews", methods=["POST"])
@@ -210,6 +368,7 @@ def add_review():
         "INSERT INTO reviews (hotel_id, user_id, reviewer_name, rating, comment) VALUES (%s,%s,%s,%s,%s)",
         (hotel_id, user_id, reviewer_name, rating, comment), commit=True,
     )
+    sync_hotel_review_stats()
     return jsonify(success=True, message="Yorum eklendi.")
 
 
@@ -373,17 +532,54 @@ def get_hotel(hotel_id):
     if not hotel:
         return jsonify(error="Otel bulunamadı."), 404
 
-    rooms = run_query(
-        "SELECT * FROM rooms WHERE hotel_id=%s AND status='ACTIVE' ORDER BY price_per_night",
-        (hotel_id,), fetchall=True,
-    )
-    reviews = run_query(
-        "SELECT reviewer_name, rating, comment, created_at FROM reviews WHERE hotel_id=%s ORDER BY created_at DESC LIMIT 10",
-        (hotel_id,), fetchall=True,
-    )
+    try:
+        rooms = run_query(
+            "SELECT * FROM rooms WHERE hotel_id=%s AND status='ACTIVE' ORDER BY price_per_night",
+            (hotel_id,), fetchall=True,
+        )
+    except Exception:
+        rooms = []
+    try:
+        reviews = run_query(
+            "SELECT reviewer_name, rating, comment, created_at FROM reviews WHERE hotel_id=%s ORDER BY created_at DESC LIMIT 10",
+            (hotel_id,), fetchall=True,
+        )
+    except Exception:
+        reviews = []
     hotel["rooms"] = rooms or []
     hotel["guest_reviews"] = reviews or []
     return jsonify(hotel)
+
+
+@app.route("/api/hotels/<int:hotel_id>/reviews")
+def get_hotel_reviews(hotel_id):
+    hotel = run_query(
+        "SELECT id FROM hotels WHERE id=%s AND status='ACTIVE'",
+        (hotel_id,), fetchone=True,
+    )
+    if not hotel:
+        return jsonify(error="Otel bulunamadı."), 404
+
+    reviews = run_query(
+        """SELECT reviewer_name, rating, comment, created_at
+           FROM reviews WHERE hotel_id=%s ORDER BY created_at DESC, id DESC LIMIT 50""",
+        (hotel_id,), fetchall=True,
+    ) or []
+    stats = run_query(
+        """SELECT COUNT(*) AS review_count,
+                  ROUND(AVG(rating), 1) AS average_rating,
+                  SUM(CASE WHEN rating >= 8.5 THEN 1 ELSE 0 END) AS recommend_count
+           FROM reviews WHERE hotel_id=%s""",
+        (hotel_id,), fetchone=True,
+    ) or {"review_count": 0, "average_rating": None, "recommend_count": 0}
+    return jsonify({
+        "reviews": reviews,
+        "stats": {
+            "review_count": int(stats.get("review_count") or 0),
+            "average_rating": float(stats["average_rating"]) if stats.get("average_rating") is not None else None,
+            "recommend_count": int(stats.get("recommend_count") or 0),
+        },
+    })
 
 
 # ── ROOMS ─────────────────────────────────────────
@@ -392,21 +588,31 @@ def get_hotel(hotel_id):
 def get_hotel_rooms(hotel_id):
     checkin  = request.args.get("checkin")
     checkout = request.args.get("checkout")
+    guests = int(request.args.get("guests") or request.args.get("guest_count") or 0)
 
-    rooms = run_query(
-        "SELECT * FROM rooms WHERE hotel_id=%s AND status='ACTIVE'",
-        (hotel_id,), fetchall=True,
-    )
+    try:
+        rooms = run_query(
+            "SELECT * FROM rooms WHERE hotel_id=%s AND status='ACTIVE'",
+            (hotel_id,), fetchall=True,
+        )
+    except Exception:
+        rooms = []
+
+    if guests:
+        rooms = [room for room in rooms if int(room.get("capacity") or room.get("max_guests") or 0) >= guests]
 
     if checkin and checkout and rooms:
         for room in rooms:
-            conflict = run_query(
-                """SELECT id FROM reservations
-                   WHERE room_id=%s AND status='CONFIRMED'
-                   AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
-                (room["id"], checkin, checkout), fetchone=True,
-            )
-            room["available"] = not bool(conflict)
+            try:
+                conflict = run_query(
+                    """SELECT id FROM reservations
+                       WHERE room_id=%s AND status='CONFIRMED'
+                       AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
+                    (room["id"], checkin, checkout), fetchone=True,
+                )
+                room["available"] = not bool(conflict)
+            except Exception:
+                room["available"] = True
 
     return jsonify(rooms or [])
 
@@ -425,45 +631,122 @@ def create_reservation():
     guest_name  = data.get("guest_name", "")
     guest_email = data.get("guest_email", "")
     guest_phone = data.get("guest_phone", "")
+    special_requests = (data.get("special_requests") or "").strip() or None
+    room_count = int(data.get("room_count") or data.get("rooms") or 1)
+    total_adults = int(data.get("total_adults") or data.get("adults") or 0)
+    total_children = int(data.get("total_children") or data.get("children") or 0)
+    room_allocations = data.get("room_allocations")
+    parsed_allocations = []
+    if isinstance(room_allocations, str) and room_allocations.strip():
+        try:
+            parsed_allocations = json.loads(room_allocations)
+        except Exception:
+            parsed_allocations = []
+    elif isinstance(room_allocations, list):
+        parsed_allocations = room_allocations
+    elif isinstance(room_allocations, dict):
+        parsed_allocations = [room_allocations]
+
+    if parsed_allocations and not isinstance(parsed_allocations, list):
+        parsed_allocations = []
     source   = data.get("source", "MANUAL")
 
     if not all([room_id, checkin, checkout]):
         return jsonify(success=False, message="Eksik alan var."), 400
 
-    conflict = run_query(
-        """SELECT id FROM reservations
-           WHERE room_id=%s AND status='CONFIRMED'
-           AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
-        (room_id, checkin, checkout), fetchone=True,
-    )
-    if conflict:
-        return jsonify(success=False, message="Seçilen tarihlerde oda müsait değil."), 409
-
-    room = run_query("SELECT * FROM rooms WHERE id=%s", (room_id,), fetchone=True)
-    if not room:
-        return jsonify(success=False, message="Oda bulunamadı."), 404
-
     try:
         nights = (datetime.strptime(checkout, "%Y-%m-%d") - datetime.strptime(checkin, "%Y-%m-%d")).days
         if nights <= 0:
             return jsonify(success=False, message="Çıkış tarihi girişten sonra olmalı."), 400
-        total = float(room["price_per_night"]) * nights
     except Exception:
-        total = 0.0
+        nights = 0
+
+    total = 0.0
+    normalized_allocations = []
+
+    if parsed_allocations:
+        for allocation in parsed_allocations:
+            if not isinstance(allocation, dict):
+                return jsonify(success=False, message="Oda planı geçersiz."), 400
+            alloc_room_id = allocation.get("room_id") or allocation.get("roomId") or allocation.get("id")
+            if not alloc_room_id:
+                return jsonify(success=False, message="Oda planı eksik."), 400
+
+            room = run_query("SELECT * FROM rooms WHERE id=%s AND hotel_id=%s AND status='ACTIVE'", (alloc_room_id, hotel_id), fetchone=True)
+            if not room:
+                return jsonify(success=False, message="Seçilen oda bulunamadı."), 404
+
+            conflict = run_query(
+                """SELECT id FROM reservations
+                   WHERE room_id=%s AND status='CONFIRMED'
+                   AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
+                (room["id"], checkin, checkout), fetchone=True,
+            )
+            if conflict:
+                return jsonify(success=False, message="Seçilen tarihlerde oda müsait değil."), 409
+
+            alloc_adults = int(allocation.get("adults") or 0)
+            alloc_children = int(allocation.get("children") or 0)
+            alloc_guests = alloc_adults + alloc_children
+            if alloc_guests <= 0:
+                return jsonify(success=False, message="Oda için geçerli misafir sayısı girilmedi."), 400
+            if int(room.get("capacity") or 0) < alloc_guests:
+                return jsonify(success=False, message="Seçilen oda kapasiteyi karşılamıyor."), 400
+
+            normalized_allocations.append({
+                "room_id": room["id"],
+                "room_type": room.get("room_type"),
+                "capacity": int(room.get("capacity") or 0),
+                "price_per_night": float(room.get("price_per_night") or 0),
+                "adults": alloc_adults,
+                "children": alloc_children,
+                "guests": alloc_guests,
+            })
+            total += float(room.get("price_per_night") or 0) * nights
+
+        if normalized_allocations:
+            room_id = normalized_allocations[0]["room_id"]
+            room_allocations = json.dumps(normalized_allocations)
+        else:
+            room_allocations = None
+    else:
+        room = run_query("SELECT * FROM rooms WHERE id=%s", (room_id,), fetchone=True)
+        if not room:
+            return jsonify(success=False, message="Oda bulunamadı."), 404
+
+        conflict = run_query(
+            """SELECT id FROM reservations
+               WHERE room_id=%s AND status='CONFIRMED'
+               AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
+            (room_id, checkin, checkout), fetchone=True,
+        )
+        if conflict:
+            return jsonify(success=False, message="Seçilen tarihlerde oda müsait değil."), 409
+
+        if guests and int(room.get("capacity") or 0) < int(guests):
+            return jsonify(success=False, message="Seçilen oda kapasiteyi karşılamıyor."), 400
+
+        total = float(room["price_per_night"]) * nights
+        room_allocations = None
+
+    taxes = round(total * 0.1)
+    grand_total = round(total + taxes, 2)
 
     new_id = run_query(
         """INSERT INTO reservations
            (user_id, hotel_id, room_id, check_in_date, check_out_date,
-            guest_count, total_price, guest_name, guest_email, guest_phone, reservation_source)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+            guest_count, total_price, guest_name, guest_email, guest_phone, special_requests,
+            room_count, total_adults, total_children, room_allocations, reservation_source)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (user_id, hotel_id, room_id, checkin, checkout,
-         guests, total, guest_name, guest_email, guest_phone, source),
+         guests, grand_total, guest_name, guest_email, guest_phone, special_requests,
+         room_count, total_adults, total_children, room_allocations, source),
         commit=True, return_lastrowid=True,
     )
     booking_ref = f"BK-{datetime.now().year}-{new_id:06d}" if new_id else "BK-UNKNOWN"
 
     return jsonify(success=True, reservation_id=new_id,
-                   booking_ref=booking_ref, total_price=total, nights=nights)
+                   booking_ref=booking_ref, total_price=grand_total, nights=nights)
 
 
 @app.route("/api/reservations", methods=["GET"])
@@ -781,4 +1064,3 @@ def chatbot_status():
 
 if __name__ == "__main__":
     app.run(debug=True)
-

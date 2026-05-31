@@ -6,11 +6,22 @@ import BookingSummary from '../components/BookingSummary.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
 import { createReservation } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import { getNights, normalizeRoomPlans, normalizeRoomSelections, roomPlanTotals, roomSelectionTotals } from '../utils/bookingState.js'
 
 export default function BookingPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { selectedHotel, selectedRoom, dateState, guestState, setReservationId, setTotalPrice } = useBooking()
+  const {
+    selectedHotel,
+    dateState,
+    guestState,
+    roomPlans,
+    roomSelections,
+    specialRequests,
+    setSpecialRequests,
+    setReservationId,
+    setTotalPrice
+  } = useBooking()
 
   const [guestInfo, setGuestInfo] = useState({
     name: user?.name || '',
@@ -34,33 +45,59 @@ export default function BookingPage() {
   const set = (k) => (e) => setGuestInfo(g => ({ ...g, [k]: e.target.value }))
   const setExtra = (k) => (e) => setExtras(ex => ({ ...ex, [k]: e.target.checked }))
 
-  const nights = dateState?.checkin && dateState?.checkout
-    ? Math.max(1, Math.round((new Date(dateState.checkout) - new Date(dateState.checkin)) / (1000 * 60 * 60 * 24)))
-    : 1
-  const pricePerNight = selectedRoom?.price_per_night || selectedRoom?.price || 0
-  const roomTotal = pricePerNight * nights
-  const taxes = Math.round(roomTotal * 0.1)
-  const grandTotal = roomTotal + taxes
+  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const resolvedRoomPlans = normalizeRoomPlans(roomPlans, {
+    roomCount: guestState?.rooms || 1,
+    totalAdults: guestState?.adults || 2,
+    totalChildren: guestState?.children || 0,
+  })
+  const totals = roomPlanTotals(resolvedRoomPlans)
+  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const pricing = roomSelectionTotals(resolvedRoomSelections, nights)
+  const roomTotal = pricing.roomTotal
+  const taxes = pricing.taxes
+  const grandTotal = pricing.grandTotal
 
   const handleProceed = async () => {
     if (!guestInfo.name || !guestInfo.email) { setError('Please fill in required guest information.'); return }
-    if (!selectedHotel || !selectedRoom) { setError('No hotel or room selected. Please go back and select a room.'); return }
+    if (!selectedHotel || !resolvedRoomSelections.length || resolvedRoomSelections.some(selection => !selection?.room)) {
+      setError('No hotel or room selected. Please go back and select a room for each room plan.')
+      return
+    }
     setLoading(true)
     setError('')
     try {
+      const roomAllocations = resolvedRoomSelections.map(selection => ({
+        room_id: selection.room?.id ?? selection.roomId,
+        room_type: selection.room?.room_type || selection.roomType || selection.room?.name || 'Room',
+        capacity: selection.room?.capacity || selection.capacity || 0,
+        price_per_night: selection.room?.price_per_night || selection.pricePerNight || 0,
+        adults: selection.adults,
+        children: selection.children,
+        guests: selection.guests,
+      }))
       const data = await createReservation({
         hotel_id: selectedHotel.id,
-        room_id: selectedRoom.id,
+        room_id: roomAllocations[0]?.room_id,
+        check_in_date: dateState?.checkin,
+        check_out_date: dateState?.checkout,
         checkin_date: dateState?.checkin,
         checkout_date: dateState?.checkout,
-        adults: guestState?.adults || 2,
-        children: guestState?.children || 0,
-        rooms: guestState?.rooms || 1,
+        guest_count: totals.totalGuests,
+        adults: totals.totalAdults,
+        children: totals.totalChildren,
+        rooms: totals.roomCount,
         guest_name: guestInfo.name,
         guest_surname: guestInfo.surname,
         guest_email: guestInfo.email,
         guest_phone: guestInfo.phone,
-        extras
+        room_count: totals.roomCount,
+        total_adults: totals.totalAdults,
+        total_children: totals.totalChildren,
+        room_allocations: roomAllocations,
+        special_requests: specialRequests.trim(),
+        extras,
+        total_price: grandTotal,
       })
       if (data.error) { setError(data.error); return }
       setReservationId(data.reservation_id || data.id)
@@ -191,6 +228,20 @@ export default function BookingPage() {
                 Airport pickup shuttle (+$25)
               </label>
             </div>
+          </div>
+
+          <div className="bcard">
+            <div className="bcard-title">Special Requests</div>
+            <div className="bcard-sub">
+              Let the hotel know about any special requests. Requests are subject to availability.
+            </div>
+            <textarea
+              className="form-inp special-req-input"
+              placeholder="Example: late check-in, extra bed, room preference, allergy information..."
+              value={specialRequests}
+              onChange={e => setSpecialRequests(e.target.value)}
+              rows={5}
+            />
           </div>
 
           {error && <div className="ferr show" style={{ marginBottom: 12 }}>{error}</div>}

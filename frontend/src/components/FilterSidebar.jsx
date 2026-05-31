@@ -1,9 +1,7 @@
 import React from 'react'
+import { AMENITY_FILTERS, CITY_FILTERS, sanitizePriceInput } from '../utils/searchFilters.js'
 
-const CITIES = ['All', 'Kyrenia', 'Nicosia', 'Famagusta', 'Iskele', 'Morphou']
-const AMENITIES = ['Pool', 'Beach', 'Spa', 'Casino', 'Restaurant', 'Gym', 'WiFi', 'Bar', 'Parking']
-
-export default function FilterSidebar({ filters, onChange }) {
+export default function FilterSidebar({ filters, onChange, priceError = '' }) {
   const { city, amenities, minPrice, maxPrice, minRating } = filters
 
   const toggleAmenity = (a) => {
@@ -16,27 +14,27 @@ export default function FilterSidebar({ filters, onChange }) {
       <div className="s-heading">Filters</div>
 
       <div className="filter-title">City</div>
-      {CITIES.map(c => (
-        <label className="rating-item" key={c}>
+      {CITY_FILTERS.map(c => (
+        <label className="rating-item" key={c.value}>
           <input
             type="radio"
             name="city"
-            checked={city === c}
-            onChange={() => onChange({ ...filters, city: c })}
+            checked={city === c.value}
+            onChange={() => onChange({ ...filters, city: c.value })}
           />
-          {c}
+          {c.label}
         </label>
       ))}
 
       <div className="filter-title">Amenities</div>
-      {AMENITIES.map(a => (
-        <label className="filter-item" key={a}>
+      {AMENITY_FILTERS.map(a => (
+        <label className="filter-item" key={a.value}>
           <input
             type="checkbox"
-            checked={amenities.includes(a)}
-            onChange={() => toggleAmenity(a)}
+            checked={amenities.includes(a.value)}
+            onChange={() => toggleAmenity(a.value)}
           />
-          {a}
+          {a.label}
         </label>
       ))}
 
@@ -45,19 +43,26 @@ export default function FilterSidebar({ filters, onChange }) {
         <input
           className="price-inp"
           type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
           placeholder="Min $"
           value={minPrice}
-          onChange={e => onChange({ ...filters, minPrice: e.target.value })}
+          onChange={e => onChange({ ...filters, minPrice: sanitizePriceInput(e.target.value) })}
         />
         <span style={{ color: 'var(--muted)', fontSize: 13 }}>–</span>
         <input
           className="price-inp"
           type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
           placeholder="Max $"
           value={maxPrice}
-          onChange={e => onChange({ ...filters, maxPrice: e.target.value })}
+          onChange={e => onChange({ ...filters, maxPrice: sanitizePriceInput(e.target.value) })}
         />
       </div>
+      {priceError && <div style={{ color: 'var(--red)', fontSize: 11.5, marginTop: 6, lineHeight: 1.4 }}>{priceError}</div>}
 
       <div className="filter-title">Min Rating</div>
       {[9, 8, 7, 0].map(r => (
@@ -74,7 +79,7 @@ export default function FilterSidebar({ filters, onChange }) {
 
       <button
         className="s-search-btn"
-        onClick={() => onChange({ city: 'All', amenities: [], minPrice: '', maxPrice: '', minRating: 0 })}
+        onClick={() => onChange({ city: 'all', amenities: [], minPrice: '', maxPrice: '', minRating: 0 })}
       >
         Clear Filters
       </button>

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
+import { getHotelId } from '../utils/hotelRouting.js'
 
 const WishlistContext = createContext(null)
 
@@ -17,16 +18,26 @@ export function WishlistProvider({ children }) {
   }, [favorites])
 
   const toggle = (hotel) => {
+    const hotelId = getHotelId(hotel)
+    if (hotelId === null) return
     setFavorites(prev => {
-      const exists = prev.some(h => h.id === hotel.id)
-      if (exists) return prev.filter(h => h.id !== hotel.id)
+      const exists = prev.some(h => getHotelId(h) === hotelId)
+      if (exists) return prev.filter(h => getHotelId(h) !== hotelId)
       return [...prev, hotel]
     })
   }
 
-  const isFavorite = (id) => favorites.some(h => h.id === id)
+  const isFavorite = (id) => {
+    const normalized = getHotelId({ id })
+    if (normalized === null) return false
+    return favorites.some(h => getHotelId(h) === normalized)
+  }
 
-  const remove = (id) => setFavorites(prev => prev.filter(h => h.id !== id))
+  const remove = (id) => {
+    const normalized = getHotelId({ id })
+    if (normalized === null) return
+    setFavorites(prev => prev.filter(h => getHotelId(h) !== normalized))
+  }
 
   return (
     <WishlistContext.Provider value={{ favorites, toggle, isFavorite, remove }}>

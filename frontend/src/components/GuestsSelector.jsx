@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Users } from 'lucide-react'
 
-export default function GuestsSelector({ guests, onChange, className = '' }) {
+export default function GuestsSelector({ guests, onChange, touched = false, className = '' }) {
   const [open, setOpen] = useState(false)
   const ref = useRef()
 
@@ -29,7 +29,7 @@ export default function GuestsSelector({ guests, onChange, className = '' }) {
         style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}
       >
         <Users style={{ width: 13, height: 13, stroke: 'var(--muted)' }} />
-        <span className="dp-val">{label}</span>
+        <span className="dp-val">{touched ? label : 'Add guests'}</span>
       </button>
       {open && (
         <div className="s-guest-picker" style={{ minWidth: 260 }}>

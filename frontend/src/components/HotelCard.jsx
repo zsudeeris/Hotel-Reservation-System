@@ -1,23 +1,26 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { MapPin, Heart } from 'lucide-react'
 import { useWishlist } from '../context/WishlistContext.jsx'
+import { getHotelDetailPath, getHotelName } from '../utils/hotelRouting.js'
 
 export default function HotelCard({ hotel }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { toggle, isFavorite } = useWishlist()
+  const hotelPath = getHotelDetailPath(hotel, location.search)
   const fav = isFavorite(hotel.id)
   const score = parseFloat(hotel.score || 0)
   const scoreClass = score >= 9 ? 'ok' : (score >= 8 ? 'good' : '')
   const scoreLabel = score >= 9 ? 'Exceptional' : score >= 8 ? 'Excellent' : score >= 7 ? 'Very Good' : 'Good'
 
   return (
-    <div className="h-card" onClick={() => navigate(`/hotels/${hotel.id}`)}>
+    <div className="h-card" onClick={() => { if (hotelPath) navigate(hotelPath) }}>
       <div style={{ position: 'relative' }}>
         <img
           className="h-card-img"
           src={hotel.img || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80'}
-          alt={hotel.hotel_name}
+          alt={getHotelName(hotel)}
           onError={e => { e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80' }}
         />
         <button
@@ -29,7 +32,7 @@ export default function HotelCard({ hotel }) {
       </div>
       <div className="h-card-body">
         <div className="h-card-stars">{'★'.repeat(Math.min(5, hotel.stars || 5))}</div>
-        <div className="h-card-name">{hotel.hotel_name}</div>
+        <div className="h-card-name">{getHotelName(hotel)}</div>
         <div className="h-card-loc">
           <MapPin style={{ width: 11, height: 11 }} />
           {hotel.city}{hotel.district ? `, ${hotel.district}` : ''}

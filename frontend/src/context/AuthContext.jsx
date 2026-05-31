@@ -7,6 +7,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [pendingEmail, setPendingEmail] = useState(null)
+  const [pendingCode, setPendingCode] = useState(null)
 
   useEffect(() => {
     api.getMe()
@@ -21,8 +22,9 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password, roleHint) => {
     const data = await api.login({ email, password, role_hint: roleHint })
-    if (data.requires_2fa) {
+    if (data?.success && data.debug_code) {
       setPendingEmail(email)
+      setPendingCode(data.debug_code || null)
     }
     return data
   }
@@ -35,14 +37,16 @@ export function AuthProvider({ children }) {
       const me = await api.getMe()
       if (me?.authenticated && me.user) setUser(me.user)
       setPendingEmail(null)
+      setPendingCode(null)
     }
     return data
   }
 
   const register = async (formData) => {
     const data = await api.register(formData)
-    if (data.requires_2fa) {
+    if (data?.success && data.debug_code) {
       setPendingEmail(formData.email)
+      setPendingCode(data.debug_code || null)
     }
     return data
   }
@@ -51,10 +55,11 @@ export function AuthProvider({ children }) {
     await api.logout()
     setUser(null)
     setPendingEmail(null)
+    setPendingCode(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, pendingEmail, login, verify2FA, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, pendingEmail, pendingCode, setPendingCode, login, verify2FA, register, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   )

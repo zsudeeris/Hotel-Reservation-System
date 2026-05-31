@@ -1,11 +1,14 @@
 import React from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { MapPin, Heart, ArrowRight } from 'lucide-react'
 import { useWishlist } from '../context/WishlistContext.jsx'
+import { getHotelDetailPath, getHotelName } from '../utils/hotelRouting.js'
 
 export default function SearchHotelCard({ hotel }) {
   const navigate = useNavigate()
+  const location = useLocation()
   const { toggle, isFavorite } = useWishlist()
+  const hotelPath = getHotelDetailPath(hotel, location.search)
   const fav = isFavorite(hotel.id)
   const score = parseFloat(hotel.score || 0)
   const scoreClass = score >= 9 ? 'exc' : ''
@@ -15,12 +18,12 @@ export default function SearchHotelCard({ hotel }) {
     : []
 
   return (
-    <div className="r-card" onClick={() => navigate(`/hotels/${hotel.id}`)}>
+    <div className="r-card" onClick={() => { if (hotelPath) navigate(hotelPath) }}>
       <div className="r-card-media">
         <img
           className="r-card-img"
           src={hotel.img || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80'}
-          alt={hotel.hotel_name}
+          alt={getHotelName(hotel)}
           onError={e => { e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80' }}
         />
         <button
@@ -32,7 +35,7 @@ export default function SearchHotelCard({ hotel }) {
       </div>
       <div className="r-card-body">
         <div style={{ fontSize: 12, color: 'var(--gold)', marginBottom: 4 }}>{'★'.repeat(Math.min(5, hotel.stars || 5))}</div>
-        <div className="r-card-name">{hotel.hotel_name}</div>
+        <div className="r-card-name">{getHotelName(hotel)}</div>
         <div className="r-card-dist">
           <MapPin style={{ width: 11, height: 11 }} />
           {hotel.city}{hotel.district ? `, ${hotel.district}` : ''}

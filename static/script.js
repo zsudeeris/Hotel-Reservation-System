@@ -82,6 +82,10 @@ function showPage(pageId, opts = {}) {
     }
     currentPageId = pageId;
     if (pageId === 'homePage' && !allHotelsCache.length) loadHotels();
+    if (pageId === 'homePage' || pageId === 'mainMenuPage') {
+      resetSearchBarState();
+      resetLandingSearchBarState();
+    }
     if (pageId === 'bookingPage') updateBookingSummary();
     syncFavoriteButtons();
     placeLanguageSwitcher();
@@ -200,9 +204,12 @@ const UI_TEXT = {
   'Select Date': 'Tarih Seç',
   'Rooms': 'Odalar',
   'Guest Reviews': 'Misafir Yorumları',
+  'Recent Reviews': 'Son Yorumlar',
   'See More': 'Daha Fazla',
   'See Less': 'Daha Az',
   'See all amenities ›': 'Tüm olanakları gör ›',
+  'See All Reviews': 'Tüm Yorumları Gör',
+  'Hide Reviews': 'Yorumları Gizle',
   'See less amenities': 'Daha az olanak göster',
   'See all comments': 'Tüm yorumları gör',
   'Hide comments': 'Yorumları gizle',
@@ -310,12 +317,21 @@ function resendCode(e) {
     .then(data => {
       if (data.success) {
         setTwoFAMessage(data.debug_code);
-        startTimer(300);
+        startTimer(Number(data.expires_in) || 300);
+        const input = document.getElementById('twofaCode');
+        if (input) {
+          input.value = '';
+          input.focus();
+        }
       } else {
+        setErrorText('twofaErr', data.message || 'Unable to resend code.');
         showMsg('twofaErr', true);
       }
     })
-    .catch(() => showMsg('twofaErr', true));
+    .catch(() => {
+      setErrorText('twofaErr', 'Unable to resend code.');
+      showMsg('twofaErr', true);
+    });
 }
 
 // ── AUTH: REGISTER ───────────────────────────────
@@ -334,8 +350,8 @@ function submitRegister(event) {
   setFieldError('regEmail', 'regEmailErr', !emailOk);
   if (!emailOk) valid = false;
 
-  // Password validation: 8+ chars, 1 uppercase, 1 number
-  const pwOk = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+  // Demo-friendly password validation: 6+ characters.
+  const pwOk = password.length >= 6;
   setFieldError('regPassword', 'regPasswordErr', !pwOk);
   if (!pwOk) valid = false;
 
@@ -357,12 +373,21 @@ function submitRegister(event) {
     if (data.success) {
       setTwoFAMessage(data.debug_code);
       showPage('twoFAPage');
-      startTimer(300);
+      startTimer(Number(data.expires_in) || 300);
+      const input = document.getElementById('twofaCode');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     } else {
-      alert(data.message || 'Registration failed');
+      setErrorText('registerErr', data.message || 'Registration failed.');
+      showMsg('registerErr', true);
     }
   })
-  .catch(() => alert('Registration failed. Check Flask/MySQL is running.'));
+  .catch(() => {
+    setErrorText('registerErr', 'Registration failed. Check Flask/MySQL is running.');
+    showMsg('registerErr', true);
+  });
 }
 
 // ── AUTH: STAFF REGISTER ─────────────────────────
@@ -380,7 +405,7 @@ function submitStaffRegister(event) {
   setFieldError('staffEmail', 'staffEmailErr', !emailOk);
   if (!emailOk) valid = false;
 
-  const pwOk = password.length >= 8 && /[A-Z]/.test(password) && /[0-9]/.test(password);
+  const pwOk = password.length >= 6;
   setFieldError('staffPassword', 'staffPasswordErr', !pwOk);
   if (!pwOk) valid = false;
 
@@ -401,7 +426,12 @@ function submitStaffRegister(event) {
     if (data.success) {
       setTwoFAMessage(data.debug_code);
       showPage('twoFAPage');
-      startTimer(300);
+      startTimer(Number(data.expires_in) || 300);
+      const input = document.getElementById('twofaCode');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     } else {
       if (errEl) { errEl.textContent = data.message || 'Registration failed.'; errEl.classList.add('show'); }
     }
@@ -429,13 +459,22 @@ function submitLogin(event) {
     if (data.success) {
       setTwoFAMessage(data.debug_code);
       showPage('twoFAPage');
-      startTimer(300);
+      startTimer(Number(data.expires_in) || 300);
+      const input = document.getElementById('twofaCode');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     } else {
+      setErrorText('loginErr', data.message || 'Invalid email or password!');
       showMsg('loginErr', true);
       document.getElementById('loginPassword').classList.add('err');
     }
   })
-  .catch(() => showMsg('loginErr', true));
+  .catch(() => {
+    setErrorText('loginErr', 'Login failed. Check backend connection.');
+    showMsg('loginErr', true);
+  });
 }
 
 function submitAdminLogin(event) {
@@ -456,12 +495,21 @@ function submitAdminLogin(event) {
       setTwoFAMessage(data.debug_code);
       showPage('twoFAPage');
       startTimer(300);
+      const input = document.getElementById('twofaCode');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
     } else {
+      setErrorText('adminLoginErr', data.message || 'Invalid admin credentials or role.');
       showMsg('adminLoginErr', true);
       document.getElementById('adminPassword').classList.add('err');
     }
   })
-  .catch(() => showMsg('adminLoginErr', true));
+  .catch(() => {
+    setErrorText('adminLoginErr', 'Login failed. Check backend connection.');
+    showMsg('adminLoginErr', true);
+  });
 }
 
 // ── AUTH: 2FA VERIFY ─────────────────────────────
@@ -478,13 +526,17 @@ function verify2FA(event) {
   .then(r => r.json())
   .then(data => {
     if (!data.success) {
+      setErrorText('twofaErr', data.message || 'Invalid or expired code');
       showMsg('twofaErr', true);
       return;
     }
     clearInterval(timerInterval);
     routeByRole(data.role);
   })
-  .catch(() => showMsg('twofaErr', true));
+  .catch(() => {
+    setErrorText('twofaErr', 'Invalid or expired code');
+    showMsg('twofaErr', true);
+  });
 }
 
 function routeByRole(role) {
@@ -505,10 +557,14 @@ function routeByRole(role) {
 
 function setTwoFAMessage(code) {
   const el = document.getElementById('twofaMessage');
-  if (!el) return;
-  el.textContent = code
-    ? `Local test 2FA code: ${code}`
-    : 'We sent a 6-digit verification code to your email or phone.';
+  const preview = document.getElementById('twofaCodePreview');
+  // Demo only: showing 2FA code on screen. Do not use in production.
+  if (el) {
+    el.textContent = code
+      ? `Demo only: showing 2FA code on screen. Do not use in production. Code: ${code}`
+      : 'We sent a 6-digit verification code to your email or phone.';
+  }
+  if (preview) preview.textContent = code || '------';
 }
 
 // ── LOGOUT ───────────────────────────────────────
@@ -534,13 +590,69 @@ const DEMO_HOTELS = [
 // ── DESTINATION AUTOCOMPLETE ─────────────────────────
 const STATIC_DESTS = [
   'Girne','Kyrenia','Lefkoşa','Nicosia',
-  'Gazimağusa','Famagusta','İskele','Bafra',
+  'Gazimağusa','Famagusta','İskele','Iskele','Bafra',
   'Güzelyurt','Morphou','Dipkarpaz','Karpaz'
 ];
 
+const DEST_CITY_ALIASES = [
+  { value: 'Girne', label: 'Girne / Kyrenia', aliases: ['Kyrenia'] },
+  { value: 'Lefkoşa', label: 'Lefkoşa / Nicosia', aliases: ['Nicosia', 'Lefkosa'] },
+  { value: 'Gazimağusa', label: 'Gazimağusa / Famagusta', aliases: ['Famagusta', 'Gazimagusa'] },
+  { value: 'İskele', label: 'İskele / Iskele', aliases: ['Iskele'] },
+  { value: 'Güzelyurt', label: 'Güzelyurt / Morphou', aliases: ['Morphou', 'Guzelyurt'] },
+  { value: 'Dipkarpaz', label: 'Dipkarpaz / Karpaz', aliases: ['Karpaz'] },
+  { value: 'Bafra', label: 'Bafra', aliases: [] }
+];
+
+function normalizeSearchText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c');
+}
+
+function addDestSuggestion(list, seen, item) {
+  const key = normalizeSearchText(item.value || item.label);
+  if (!key || seen.has(key)) return;
+  seen.add(key);
+  list.push({
+    ...item,
+    normalizedValue: key,
+    normalizedLabel: normalizeSearchText(item.label),
+    normalizedAliases: (item.aliases || []).map(normalizeSearchText),
+  });
+}
+
 function getDestSuggestions() {
-  const fromHotels = allHotelsCache.flatMap(h => [h.city, h.district].filter(Boolean));
-  return [...new Set([...STATIC_DESTS, ...fromHotels])].sort();
+  const list = [];
+  const seen = new Set();
+
+  STATIC_DESTS.forEach(dest => addDestSuggestion(list, seen, { type: 'city', value: dest, label: dest, aliases: [] }));
+  DEST_CITY_ALIASES.forEach(city => addDestSuggestion(list, seen, { type: 'city', value: city.value, label: city.label, aliases: city.aliases }));
+
+  allHotelsCache.forEach(h => {
+    const hotelName = h.hotel_name || h.name || '';
+    if (hotelName) addDestSuggestion(list, seen, { type: 'hotel', value: hotelName, label: hotelName, aliases: [] });
+    const city = h.city || '';
+    if (city) {
+      const label = h.district ? `${city} / ${h.district}` : city;
+      addDestSuggestion(list, seen, { type: 'city', value: city, label, aliases: h.district ? [h.district] : [] });
+    }
+    const district = h.district || '';
+    if (district) addDestSuggestion(list, seen, { type: 'city', value: district, label: district, aliases: [] });
+  });
+
+  return list.sort((a, b) => {
+    if (a.type !== b.type) return a.type === 'city' ? -1 : 1;
+    return a.label.localeCompare(b.label);
+  });
 }
 
 function setupDestAutocomplete(inputId) {
@@ -556,22 +668,35 @@ function setupDestAutocomplete(inputId) {
   wrap.appendChild(drop);
 
   function showSuggestions() {
-    const q = input.value.trim().toLowerCase();
+    const q = normalizeSearchText(input.value);
     if (!q) { drop.style.display = 'none'; return; }
 
-    const matches = getDestSuggestions().filter(s => s.toLowerCase().includes(q));
+    const matches = getDestSuggestions()
+      .map(item => {
+        const score =
+          item.normalizedValue.startsWith(q) ? 0 :
+          item.normalizedLabel.startsWith(q) ? 1 :
+          item.normalizedAliases.some(a => a.startsWith(q)) ? 2 :
+          item.normalizedValue.includes(q) ? 3 :
+          item.normalizedLabel.includes(q) ? 4 :
+          item.normalizedAliases.some(a => a.includes(q)) ? 5 :
+          99;
+        return { ...item, score };
+      })
+      .filter(item => item.score < 99)
+      .sort((a, b) => a.score - b.score || a.label.localeCompare(b.label))
+      .slice(0, 8);
 
     if (!matches.length) {
       drop.innerHTML = '<div class="dest-drop-empty">No results found</div>';
     } else {
       drop.innerHTML = matches.map(s => {
-        const idx = s.toLowerCase().indexOf(q);
-        const hi = s.slice(0, idx) +
-          '<strong>' + s.slice(idx, idx + q.length) + '</strong>' +
-          s.slice(idx + q.length);
-        return `<div class="dest-drop-item" onmousedown="pickDest('${inputId}','${s.replace(/'/g,"\\'")}')">` +
+        return `<div class="dest-drop-item" onmousedown="pickDest('${inputId}','${s.value.replace(/'/g,"\\'")}')">` +
           `<svg class="dest-pin" xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>` +
-          hi + '</div>';
+          `<div style="display:flex;flex-direction:column;min-width:0">
+            <span>${escapeHtml(s.label)}</span>
+            ${s.type === 'hotel' ? '<span style="font-size:11px;color:var(--muted)">Hotel</span>' : ''}
+          </div></div>`;
       }).join('');
     }
     drop.style.display = 'block';
@@ -599,8 +724,7 @@ function normalizeHotelsResponse(data) {
 
 function getRecommendedHotels(hotels) {
   const source = normalizeHotelsResponse(hotels);
-  const list = source.length ? source : DEMO_HOTELS;
-  return [...list].sort((a, b) => {
+  return [...source].sort((a, b) => {
     const scoreDiff = (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0);
     if (scoreDiff) return scoreDiff;
     return (parseInt(b.review_count) || 0) - (parseInt(a.review_count) || 0);
@@ -615,7 +739,7 @@ function loadHotels() {
       renderPage(1);
     })
     .catch(() => {
-      allHotelsCache = getRecommendedHotels([]);
+      allHotelsCache = [];
       renderPage(1);
     });
 }
@@ -666,6 +790,12 @@ function renderHotels(hotels) {
 // ── SEARCH ───────────────────────────────────────
 let selectedHotelId = null;
 
+function persistLastSearchState(state) {
+  try {
+    sessionStorage.setItem('bookhotel:lastSearch', JSON.stringify(state || {}));
+  } catch {}
+}
+
 function goSearch() {
   const dest    = (document.getElementById('searchDest')    || {}).value || '';
   const checkin = (document.getElementById('searchCheckin') || {}).value || '';
@@ -683,6 +813,15 @@ function goSearch() {
   const coEl = document.getElementById('sCheckout');
   if (coEl && checkout) { setDpValue('sCheckout', checkout); dateState.checkout = checkout; }
 
+  persistLastSearchState({
+    q: dest,
+    checkin,
+    checkout,
+    adults: guestState.adults,
+    children: guestState.children,
+    rooms: guestState.rooms,
+    guestTouched: guestTouched ? '1' : '0',
+  });
   updateNightsDisplay();
   updateSearchGuestDisplay();
   fetchAndRenderSearch();
@@ -774,20 +913,13 @@ function fetchAndRenderSearch() {
           return checked.every(c => am.includes(c.toLowerCase()));
         });
       }
-      // Fallback to local cache if API returned nothing
-      if (!filtered.length) {
-        const cache = allHotelsCache.length ? allHotelsCache : DEMO_HOTELS;
-        filtered = applyClientFilter(cache);
-      } else {
-        filtered = clientSort(filtered, sort);
-      }
+      filtered = clientSort(filtered, sort);
       renderSearchResults(filtered);
       const info = document.getElementById('searchResultInfo');
       if (info) info.textContent = `${filtered.length} hotel${filtered.length!==1?'s':''} found${q?' for "'+q+'"':''}`;
     })
     .catch(() => {
-      const cache = allHotelsCache.length ? allHotelsCache : DEMO_HOTELS;
-      const filtered = applyClientFilter(cache);
+      const filtered = [];
       renderSearchResults(filtered);
       const info = document.getElementById('searchResultInfo');
       if (info) info.textContent = `${filtered.length} hotel${filtered.length!==1?'s':''} found${q?' for "'+q+'"':''}`;
@@ -843,7 +975,15 @@ let detailDescExpanded = false;
 let detailAmenitiesExpanded = false;
 let detailCommentsExpanded = false;
 let currentDetailReviews = [];
-const detailGuestState = { adults: 2, children: 0, rooms: 1 };
+let detailRoomPlans = [{ adults: 2, children: 0 }];
+let detailGuestTouched = false;
+
+function setDetailBookingError(message) {
+  const el = document.getElementById('detailBookingError');
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('show', !!message);
+}
 
 function escapeHtml(value) {
   return String(value || '').replace(/[&<>"']/g, ch => ({
@@ -860,17 +1000,39 @@ function renderDetailDescription(description) {
   const btn = document.getElementById('detailSeeMoreBtn');
   if (!descEl || !btn) return;
 
-  const text = description || '';
+  const text = resolveDetailDescriptionText(currentDetailHotel, description);
   descEl.textContent = text;
-  const isLong = text.length > 180;
+  const isLong = text.length > 220;
   descEl.classList.toggle('collapsed', isLong && !detailDescExpanded);
   btn.style.display = isLong ? 'block' : 'none';
-  btn.textContent = detailDescExpanded ? 'See Less' : 'See More';
+  btn.textContent = detailDescExpanded ? 'Show less ↑' : 'Read more ↓';
 }
 
 function toggleDetailDescription() {
   detailDescExpanded = !detailDescExpanded;
   renderDetailDescription(currentDetailHotel?.description || '');
+}
+
+function resolveDetailDescriptionText(hotel, fallback = '') {
+  const raw = (fallback || '').trim();
+  if (raw) return raw;
+  if (!hotel) return '';
+  const name = hotel.hotel_name || 'This hotel';
+  const city = hotel.city || 'Northern Cyprus';
+  const district = hotel.district || city;
+  const amenities = splitAmenities(hotel.amenities || '');
+  const amenityText = amenities.join(', ');
+  const amenityHints = [];
+  if (amenities.some(a => /casino/i.test(a))) amenityHints.push('casino entertainment');
+  if (amenities.some(a => /spa/i.test(a))) amenityHints.push('a relaxing spa');
+  if (amenities.some(a => /beach/i.test(a))) amenityHints.push('easy access to the beach');
+  if (amenities.some(a => /kids|family/i.test(a))) amenityHints.push('family-friendly facilities');
+  if (amenities.some(a => /restaurant|breakfast/i.test(a))) amenityHints.push('popular dining options');
+  if (amenities.some(a => /pool/i.test(a))) amenityHints.push('a refreshing pool area');
+  const typeLine = amenityHints.length
+    ? `Guests can enjoy ${amenityHints.slice(0, 3).join(', ')}.`
+    : 'Guests can enjoy a comfortable stay with thoughtful services and facilities.';
+  return `${name} is a standout hotel in ${district}, ${city}. ${typeLine} The property is designed for travelers who value comfort, convenience, and a polished hotel experience.${amenityText ? ` Key amenities include ${amenityText}.` : ''}`;
 }
 
 function renderDetailAmenities(amenities) {
@@ -924,22 +1086,38 @@ function setDpValue(id, value) {
 }
 
 function updateDetailGuestDisplay() {
-  const a = detailGuestState.adults;
-  const c = detailGuestState.children;
-  const r = detailGuestState.rooms;
-  const label = `${a} adult${a > 1 ? 's' : ''}${c ? `, ${c} child${c > 1 ? 'ren' : ''}` : ''}, ${r} room${r > 1 ? 's' : ''}`;
+  const totals = getDetailRoomTotals();
   const display = document.getElementById('detailGuestDisplay');
-  if (display) display.textContent = label;
+  const summary = document.getElementById('detailRoomSummary');
+  if (!detailGuestTouched) {
+    if (display) {
+      display.textContent = ui('Add guests');
+      display.style.color = 'var(--muted)';
+    }
+    if (summary) summary.textContent = ui('Add guests');
+    const sGuests = document.getElementById('sGuests');
+    if (sGuests) sGuests.value = '';
+    return;
+  }
+  const label = `${totals.rooms} room${totals.rooms > 1 ? 's' : ''}, ${totals.guests} guest${totals.guests > 1 ? 's' : ''}`;
+  if (display) {
+    display.textContent = label;
+    display.style.color = 'var(--text)';
+  }
+  if (summary) summary.textContent = detailRoomPlans.map((room, idx) => {
+    const childText = room.children ? `, ${room.children} child${room.children > 1 ? 'ren' : ''}` : '';
+    return `Room ${idx + 1}: ${room.adults} adult${room.adults > 1 ? 's' : ''}${childText}`;
+  }).join(' · ');
   const sGuests = document.getElementById('sGuests');
   if (sGuests) sGuests.value = label;
 }
 
-function syncDetailGuestCounts() {
-  ['Adults', 'Children', 'Rooms'].forEach(name => {
-    const el = document.getElementById('detail' + name + 'Count');
-    const key = name.toLowerCase();
-    if (el) el.textContent = detailGuestState[key];
-  });
+function getDetailRoomTotals() {
+  const rooms = Array.isArray(bookingState.roomPlans) && bookingState.roomPlans.length
+    ? bookingState.roomPlans
+    : (Array.isArray(detailRoomPlans) && detailRoomPlans.length ? detailRoomPlans : [{ adults: 2, children: 0 }]);
+  const guests = rooms.reduce((sum, room) => sum + Math.max(1, parseInt(room.adults || 1, 10)) + Math.max(0, parseInt(room.children || 0, 10)), 0);
+  return { rooms: rooms.length, guests };
 }
 
 function toggleDetailGuestPicker() {
@@ -949,16 +1127,65 @@ function toggleDetailGuestPicker() {
   if (picker.style.display !== 'block') {
     picker.style.display = 'block';
     positionPopover(picker, trigger, 250);
+    renderDetailRoomPlans();
   } else {
     picker.style.display = 'none';
   }
 }
 
-function changeDetailGuests(type, delta) {
-  const min = type === 'adults' || type === 'rooms' ? 1 : 0;
-  const max = type === 'rooms' ? 9 : 20;
-  detailGuestState[type] = Math.max(min, Math.min(max, detailGuestState[type] + delta));
-  syncDetailGuestCounts();
+function renderDetailRoomPlans() {
+  const list = document.getElementById('detailRoomPlansList');
+  if (!list) return;
+  if (!detailRoomPlans.length) detailRoomPlans = [{ adults: 2, children: 0 }];
+  list.innerHTML = detailRoomPlans.map((room, idx) => `
+    <div class="detail-room-card">
+      <div class="detail-room-card-head">
+        <strong>Room ${idx + 1}</strong>
+        ${detailRoomPlans.length > 1 ? `<button type="button" class="detail-room-remove" onclick="removeDetailRoom(${idx})">Remove</button>` : ''}
+      </div>
+      <div class="detail-room-controls">
+        <div class="detail-room-control">
+          <span>Adults</span>
+          <div class="detail-room-stepper">
+            <button type="button" onclick="changeDetailGuests(${idx}, 'adults', -1)">−</button>
+            <strong>${room.adults}</strong>
+            <button type="button" onclick="changeDetailGuests(${idx}, 'adults', 1)">+</button>
+          </div>
+        </div>
+        <div class="detail-room-control">
+          <span>Children</span>
+          <div class="detail-room-stepper">
+            <button type="button" onclick="changeDetailGuests(${idx}, 'children', -1)">−</button>
+            <strong>${room.children}</strong>
+            <button type="button" onclick="changeDetailGuests(${idx}, 'children', 1)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  updateDetailGuestDisplay();
+}
+
+function addDetailRoom() {
+  detailGuestTouched = true;
+  detailRoomPlans.push({ adults: 1, children: 0 });
+  renderDetailRoomPlans();
+}
+
+function removeDetailRoom(index) {
+  if (detailRoomPlans.length <= 1) return;
+  detailRoomPlans.splice(index, 1);
+  detailGuestTouched = true;
+  renderDetailRoomPlans();
+}
+
+function changeDetailGuests(index, type, delta) {
+  const room = detailRoomPlans[index];
+  if (!room) return;
+  const min = type === 'adults' ? 1 : 0;
+  const max = type === 'adults' ? 8 : 8;
+  room[type] = Math.max(min, Math.min(max, (room[type] || 0) + delta));
+  detailGuestTouched = true;
   updateDetailGuestDisplay();
 }
 
@@ -979,13 +1206,42 @@ function doDetailSearch() {
   if (coEl) coEl.value = checkout;
   dateState.checkin = checkin || null;
   dateState.checkout = checkout || null;
+  const submittedRooms = detailGuestTouched ? detailRoomPlans : [{ adults: 2, children: 0 }];
+  const totals = submittedRooms.reduce((sum, room) => ({
+    adults: sum.adults + Math.max(1, parseInt(room.adults || 1, 10)),
+    children: sum.children + Math.max(0, parseInt(room.children || 0, 10)),
+    rooms: sum.rooms + 1,
+  }), { adults: 0, children: 0, rooms: 0 });
+  guestState.adults = totals.adults;
+  guestState.children = totals.children;
+  guestState.rooms = totals.rooms;
+  bookingState.roomPlans = submittedRooms.map(room => ({ adults: Math.max(1, parseInt(room.adults || 1, 10)), children: Math.max(0, parseInt(room.children || 0, 10)) }));
+  guestTouched = detailGuestTouched;
+  persistLastSearchState({
+    q: dest,
+    checkin,
+    checkout,
+    adults: guestState.adults,
+    children: guestState.children,
+    rooms: guestState.rooms,
+    guestTouched: guestTouched ? '1' : '0',
+  });
   updateDetailGuestDisplay();
   updateNightsDisplay();
+  updateSearchGuestDisplay();
   showPage('searchPage');
   fetchAndRenderSearch();
 }
 
 function openBookingPage() {
+  const checkin = document.getElementById('detailCheckin')?.value || '';
+  const checkout = document.getElementById('detailCheckout')?.value || '';
+  if (!checkin || !checkout || checkout <= checkin) {
+    setDetailBookingError('Please select check-in and check-out dates before booking.');
+    return;
+  }
+  setDetailBookingError('');
+  bookingState.roomPlans = detailGuestTouched ? detailRoomPlans.map(room => ({ adults: Math.max(1, parseInt(room.adults || 1, 10)), children: Math.max(0, parseInt(room.children || 0, 10)) })) : [{ adults: 2, children: 0 }];
   bookingCalState._ready = false;
   buildCalendar();
   updateBookingSummary();
@@ -997,11 +1253,19 @@ function _populateHotelDetail(hotel) {
   detailDescExpanded = false;
   detailAmenitiesExpanded = false;
   detailCommentsExpanded = false;
+  detailRoomPlans = [{ adults: 2, children: 0 }];
+  detailGuestTouched = false;
+  setDetailBookingError('');
+  let storedSearch = {};
+  try {
+    storedSearch = JSON.parse(sessionStorage.getItem('bookhotel:lastSearch') || '{}') || {};
+  } catch {}
 
   const nameEl = document.getElementById('detailHotelName');
   if (nameEl) nameEl.textContent = hotel.hotel_name || '';
   const destEl = document.getElementById('detailDest');
-  if (destEl) destEl.value = hotel.hotel_name || hotel.city || '';
+  const searchDest = document.getElementById('sDest')?.value || document.getElementById('searchDest')?.value || storedSearch.q || '';
+  if (destEl) destEl.value = searchDest;
 
   const locEl = document.getElementById('detailHotelLoc');
   if (locEl) locEl.textContent = (hotel.city || '') + (hotel.district ? ', ' + hotel.district : '');
@@ -1013,7 +1277,27 @@ function _populateHotelDetail(hotel) {
   renderDetailAmenities(hotel.amenities || '');
   setDpValue('detailCheckin', dateState.checkin || document.getElementById('searchCheckin')?.value || '');
   setDpValue('detailCheckout', dateState.checkout || document.getElementById('searchCheckout')?.value || '');
-  syncDetailGuestCounts();
+  if (guestTouched || storedSearch.guestTouched === '1' || storedSearch.guestTouched === 1) {
+    const rooms = Math.max(1, parseInt(guestState.rooms || 1, 10));
+    let adults = Math.max(rooms, parseInt(guestState.adults || rooms, 10));
+    let children = Math.max(0, parseInt(guestState.children || 0, 10));
+    detailRoomPlans = Array.from({ length: rooms }, () => ({ adults: 1, children: 0 }));
+    let adultsLeft = adults - rooms;
+    let i = 0;
+    while (adultsLeft > 0) {
+      detailRoomPlans[i % rooms].adults += 1;
+      adultsLeft -= 1;
+      i += 1;
+    }
+    i = 0;
+    while (children > 0) {
+      detailRoomPlans[i % rooms].children += 1;
+      children -= 1;
+      i += 1;
+    }
+    detailGuestTouched = true;
+  }
+  renderDetailRoomPlans();
   updateDetailGuestDisplay();
 
   const scoreEl = document.getElementById('detailHotelScore');
@@ -1043,8 +1327,58 @@ function _populateHotelDetail(hotel) {
     }
   }
 
-  renderReviews(hotel.guest_reviews || [], hotel.id);
+  renderReviews(hotel.guest_reviews || [], hotel.id, {
+    review_count: hotel.review_count || (hotel.guest_reviews || []).length,
+    average_rating: hotel.score || null,
+    recommend_count: Math.round((hotel.review_count || (hotel.guest_reviews || []).length || 0) * 0.7),
+  });
+  loadReviews(hotel.id);
   buildCalendar();
+}
+
+function showHotelNotFound() {
+  currentDetailHotel = null;
+  selectedHotelId = null;
+  currentDetailReviews = [];
+  detailDescExpanded = false;
+  detailAmenitiesExpanded = false;
+  detailCommentsExpanded = false;
+
+  const nameEl = document.getElementById('detailHotelName');
+  if (nameEl) nameEl.textContent = 'Hotel not found';
+
+  const locEl = document.getElementById('detailHotelLoc');
+  if (locEl) locEl.innerHTML = '<i data-lucide="map-pin" class="lbl-ico"></i>';
+
+  const imgEl = document.getElementById('detailMainImg');
+  if (imgEl) imgEl.src = 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80';
+
+  const destEl = document.getElementById('detailDest');
+  if (destEl) destEl.value = '';
+
+  const descEl = document.getElementById('detailHotelDesc');
+  if (descEl) {
+    descEl.textContent = 'Hotel not found.';
+    descEl.classList.remove('collapsed');
+  }
+  const moreBtn = document.getElementById('detailSeeMoreBtn');
+  if (moreBtn) moreBtn.style.display = 'none';
+
+  const amenWrap = document.querySelector('#hotelDetailPage .amenity-tags');
+  if (amenWrap) amenWrap.innerHTML = `<span class="amenity-tag">${ui('No amenities listed')}</span>`;
+  const amenBtn = document.getElementById('detailSeeAllAmenitiesBtn');
+  if (amenBtn) amenBtn.style.display = 'none';
+
+  const scoreEl = document.getElementById('detailHotelScore');
+  if (scoreEl) scoreEl.textContent = '';
+  const priceEl = document.getElementById('detailHotelPrice');
+  if (priceEl) priceEl.textContent = '';
+
+  const roomsEl = document.getElementById('detailRoomsList');
+  if (roomsEl) roomsEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Hotel not found.</div>';
+
+  const reviewsEl = document.getElementById('reviewsList');
+  if (reviewsEl) reviewsEl.innerHTML = '<div style="padding:20px;color:var(--muted);text-align:center">Hotel not found.</div>';
 }
 
 function openHotelDetail(hotelId) {
@@ -1056,18 +1390,13 @@ function openHotelDetail(hotelId) {
       showPage('hotelDetailPage');
     })
     .catch(() => {
-      // Fallback: use cached data so the correct hotel is still shown
-      const cache = allHotelsCache.length ? allHotelsCache : DEMO_HOTELS;
-      const fallback = cache.find(h => String(h.id) === String(hotelId));
-      if (fallback) {
-        _populateHotelDetail({ ...fallback, rooms: [], guest_reviews: [] });
-      }
+      showHotelNotFound();
       showPage('hotelDetailPage');
     });
 }
 
 // Booking state
-const bookingState = { hotel: null, room: null, transports: [], paymentTab: 'single', multiCards: [] };
+const bookingState = { hotel: null, room: null, roomPlans: [{ adults: 2, children: 0 }], transports: [], paymentTab: 'single', multiCards: [] };
 
 function toggleTransportForm(type) {
   const flight = document.getElementById('flightForm');
@@ -1143,7 +1472,8 @@ function toggleAdultAccordion() {
 }
 
 function getRoomCount() {
-  return detailGuestState.rooms || guestState.rooms || lgState.rooms || 1;
+  const plans = bookingState.roomPlans && bookingState.roomPlans.length ? bookingState.roomPlans : detailRoomPlans;
+  return Array.isArray(plans) && plans.length ? plans.length : 1;
 }
 
 function getRoomPrice() {
@@ -1169,8 +1499,16 @@ function recalcBookingTotal() {
 }
 
 function selectRoomAndBook(room, hotelId, hotelName) {
+  const checkin = document.getElementById('detailCheckin')?.value || dateState.checkin || '';
+  const checkout = document.getElementById('detailCheckout')?.value || dateState.checkout || '';
+  if (!checkin || !checkout || checkout <= checkin) {
+    setDetailBookingError('Please select check-in and check-out dates before booking.');
+    return;
+  }
+  setDetailBookingError('');
   bookingState.hotel = { id: hotelId, name: hotelName };
   bookingState.room  = room;
+  bookingState.roomPlans = detailGuestTouched ? detailRoomPlans.map(room => ({ adults: Math.max(1, parseInt(room.adults || 1, 10)), children: Math.max(0, parseInt(room.children || 0, 10)) })) : [{ adults: 2, children: 0 }];
 
   const hotel = currentDetailHotel || {};
   const loc = (hotel.city || '') + (hotel.district ? ', ' + hotel.district : '');
@@ -1471,6 +1809,7 @@ function bookingCalPick(dateStr) {
   setDpValue('searchCheckout', dateState.checkout || '');
   setDpValue('sCheckin', dateState.checkin || '');
   setDpValue('sCheckout', dateState.checkout || '');
+  setDetailBookingError('');
   updateNightsDisplay();
   buildCalendar();
 }
@@ -1486,6 +1825,8 @@ function updateBookingSummary() {
   recalcBookingTotal();
   const datesEl = document.getElementById('orderDates');
   const infoEl = document.getElementById('orderCheckinInfo');
+  const totals = getDetailRoomTotals();
+  const roomLine = `${totals.rooms} room${totals.rooms > 1 ? 's' : ''}, ${totals.guests} guest${totals.guests > 1 ? 's' : ''}`;
   const ci = dateState.checkin;
   const co = dateState.checkout;
   if (datesEl) datesEl.textContent = ci && co ? `${formatBookingDate(ci)} – ${formatBookingDate(co)}` : 'Select dates';
@@ -1493,11 +1834,11 @@ function updateBookingSummary() {
   if (payDatesEl) payDatesEl.textContent = datesEl?.textContent || (ci && co ? `${formatBookingDate(ci)} – ${formatBookingDate(co)}` : 'Select dates');
   if (infoEl) {
     infoEl.textContent = ci && co
-      ? `Check-in: ${formatBookingDate(ci)}, Check-out: ${formatBookingDate(co)}`
+      ? `Check-in: ${formatBookingDate(ci)}, Check-out: ${formatBookingDate(co)} · ${roomLine}`
       : 'Choose check-in and check-out dates';
   }
   const payInfoEl = document.getElementById('payOrderCheckinInfo');
-  if (payInfoEl) payInfoEl.textContent = infoEl?.textContent || (ci && co ? `Check-in: ${formatBookingDate(ci)}, Check-out: ${formatBookingDate(co)}` : 'Choose check-in and check-out dates');
+  if (payInfoEl) payInfoEl.textContent = infoEl?.textContent || (ci && co ? `Check-in: ${formatBookingDate(ci)}, Check-out: ${formatBookingDate(co)} · ${roomLine}` : 'Choose check-in and check-out dates');
   const payHotel = document.getElementById('payOrderHotelName');
   if (payHotel && bookingState.hotel?.name) payHotel.textContent = bookingState.hotel.name;
   const payRoom = document.getElementById('payOrderRoomName');
@@ -1627,52 +1968,70 @@ function loadAdminUsers() {
     .catch(() => {});
 }
 
-// ── YORUMLARl ─────────────────────────────────────
-function submitReview(hotelId) {
-  const rating  = document.getElementById('reviewRating')?.value;
-  const comment = document.getElementById('reviewComment')?.value.trim();
-  const name    = document.getElementById('reviewName')?.value.trim();
-  if (!rating || !comment || !name) { showToast('Please fill in all fields.'); return; }
-  const review = { rating, comment, reviewer_name: name };
-  fetch('/api/reviews', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hotel_id: hotelId, rating, comment, reviewer_name: name }),
-  })
-  .then(r => r.json())
-  .then(d => {
-    if (d.success) {
-      showToast('Review submitted!');
-      document.getElementById('reviewComment').value = '';
-      loadReviews(hotelId);
-    } else showToast(d.message || 'An error occurred.');
-  })
-  .catch(() => {
-    currentDetailReviews.unshift(review);
-    showToast('Review added locally.');
-    renderReviews(currentDetailReviews, hotelId);
-  });
-}
-
 function loadReviews(hotelId) {
-  fetch('/api/hotels/' + hotelId)
+  fetch('/api/hotels/' + hotelId + '/reviews')
     .then(r => r.json())
-    .then(hotel => renderReviews(hotel.guest_reviews || [], hotelId))
-    .catch(() => {});
+    .then(data => renderReviews(data.reviews || [], hotelId, data.stats || {}))
+    .catch(() => {
+      fetch('/api/hotels/' + hotelId)
+        .then(r => r.json())
+        .then(hotel => renderReviews(hotel.guest_reviews || [], hotelId, {
+          review_count: (hotel.guest_reviews || []).length,
+          average_rating: (hotel.guest_reviews || []).length
+            ? (hotel.guest_reviews || []).reduce((s, r) => s + (parseFloat(r.rating) || 0), 0) / (hotel.guest_reviews || []).length
+            : null,
+          recommend_count: Math.round(((hotel.guest_reviews || []).length || 0) * 0.7),
+        }))
+        .catch(() => {});
+    });
 }
 
-function renderReviews(reviews, hotelId) {
+function buildGuestHighlightsStatic() {
+  const amenities = splitAmenities(currentDetailHotel?.amenities || '');
+  const highlights = [];
+  const push = (item) => { if (item && !highlights.includes(item)) highlights.push(item); };
+  const amenityText = amenities.join(' ').toLowerCase();
+  const hotelText = `${currentDetailHotel?.hotel_name || ''} ${currentDetailHotel?.description || ''} ${amenityText}`.toLowerCase();
+
+  if (hotelText.includes('beach')) push('Great location');
+  if (amenityText.includes('spa')) push('Relaxing spa area');
+  if (amenityText.includes('casino')) push('Popular entertainment options');
+  if (amenityText.includes('pool')) push('Relaxing pool area');
+  if (amenityText.includes('kids') || amenityText.includes('family')) push('Popular with families');
+  if (amenityText.includes('restaurant') || amenityText.includes('breakfast')) push('Highly rated breakfast');
+  if ((parseFloat(currentDetailHotel?.score || 0) || 0) >= 8.5) push('Friendly staff');
+  if ((parseFloat(currentDetailHotel?.score || 0) || 0) >= 9) push('Clean and spacious rooms');
+  if ((parseInt(currentDetailHotel?.review_count || 0, 10) || 0) >= 100) push('Recommended by guests');
+  if (currentDetailHotel?.city || currentDetailHotel?.district) push('Good value for money');
+
+  return highlights.slice(0, 8);
+}
+
+function renderReviews(reviews, hotelId, meta = {}) {
   const el = document.getElementById('reviewsList');
   if (!el) return;
   currentDetailReviews = Array.isArray(reviews) ? reviews : [];
   const shownReviews = detailCommentsExpanded ? currentDetailReviews : currentDetailReviews.slice(0, 2);
   const btn = document.querySelector('.detail-comments-link');
-  if (btn) btn.textContent = detailCommentsExpanded ? 'Hide comments' : 'See all comments';
-  const avg = currentDetailReviews.length ? (currentDetailReviews.reduce((s,r)=>s+parseFloat(r.rating||0),0)/currentDetailReviews.length).toFixed(1) : '—';
+  if (btn) btn.textContent = detailCommentsExpanded ? 'Hide Reviews' : 'See All Reviews';
+  const avg = meta.average_rating !== undefined && meta.average_rating !== null
+    ? parseFloat(meta.average_rating).toFixed(1)
+    : (currentDetailReviews.length ? (currentDetailReviews.reduce((s,r)=>s+parseFloat(r.rating||0),0)/currentDetailReviews.length).toFixed(1) : '—');
+  const reviewCount = parseInt(meta.review_count || currentDetailReviews.length || 0, 10) || 0;
+  const recommendCount = parseInt(meta.recommend_count || Math.round(reviewCount * 0.7), 10) || 0;
+  const recommendLabel = reviewCount > 0 ? `${Math.round((recommendCount / reviewCount) * 100)}% Recommends` : 'No reviews yet';
+  const guestHighlights = buildGuestHighlightsStatic();
+  const goodToKnow = [
+    'Check-in starts at 14:00',
+    'Check-out until 12:00',
+    'Free cancellation may be available depending on room type',
+    'Breakfast options are available',
+    'Special requests are subject to availability',
+  ];
   el.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
       <div style="width:52px;height:52px;background:var(--green);border-radius:10px;color:#fff;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center">${avg}</div>
-      <div><div style="font-size:14px;font-weight:700;color:var(--green)">Guest Rating</div><div style="font-size:12px;color:var(--muted)">${currentDetailReviews.length} review${currentDetailReviews.length!==1?'s':''}</div></div>
+      <div><div style="font-size:14px;font-weight:700;color:var(--green)">Guest Rating</div><div style="font-size:12px;color:var(--muted)">${reviewCount} review${reviewCount!==1?'s':''} · ${recommendLabel}</div></div>
     </div>
     ${shownReviews.length ? shownReviews.map(r=>`
     <div style="background:var(--bg);border-radius:10px;padding:12px 14px;margin-bottom:8px">
@@ -1681,20 +2040,20 @@ function renderReviews(reviews, hotelId) {
         <span style="background:var(--green);color:#fff;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700">${parseFloat(r.rating||0).toFixed(1)}</span>
       </div>
       <div style="font-size:12.5px;color:var(--sub)">${r.comment||''}</div>
-    </div>`).join('') : '<div style="background:var(--bg);border-radius:10px;padding:14px;color:var(--muted);font-size:13px;margin-bottom:8px">No comments yet</div>'}
-    <div style="background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-top:12px">
-      <div style="font-size:14px;font-weight:700;margin-bottom:10px">${ui('Write a Review')}</div>
-      <input id="reviewName" type="text" placeholder="Your name" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;outline:none">
-      <select id="reviewRating" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;margin-bottom:8px;outline:none">
-        <option value="">Select rating</option>
-        <option value="10">⭐ 10 – Exceptional</option>
-        <option value="9">⭐ 9 – Excellent</option>
-        <option value="8">⭐ 8 – Very Good</option>
-        <option value="7">⭐ 7 – Good</option>
-        <option value="6">⭐ 6 – Okay</option>
-      </select>
-      <textarea id="reviewComment" placeholder="Share your experience..." rows="3" style="width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:none;outline:none;margin-bottom:8px"></textarea>
-      <button onclick="submitReview(${hotelId})" style="background:var(--green);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13.5px;font-weight:600;cursor:pointer;width:100%">${ui('Submit Review')}</button>
+      </div>`).join('') : '<div style="background:var(--bg);border-radius:10px;padding:14px;color:var(--muted);font-size:13px;margin-bottom:8px">No reviews yet. Be the first to review this hotel.</div>'}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:12px">
+      <div style="background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px">Guest Highlights</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          ${guestHighlights.length ? guestHighlights.map(item => `<span style="background:var(--green-light);color:var(--green-dark);border:1px solid rgba(26,107,90,.14);border-radius:999px;padding:8px 12px;font-size:12.5px;font-weight:700">${item}</span>`).join('') : '<span style="color:var(--muted);font-size:13px">Good location and guest-friendly service.</span>'}
+        </div>
+      </div>
+      <div style="background:var(--white);border:1.5px solid var(--border);border-radius:12px;padding:16px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:10px">Good to Know</div>
+        <div style="display:grid;gap:10px">
+          ${goodToKnow.map(item => `<div style="display:flex;align-items:flex-start;gap:8px;font-size:13px;color:var(--sub);line-height:1.5"><span style="color:var(--green);font-weight:900;line-height:1.1;margin-top:2px">✓</span><span>${item}</span></div>`).join('')}
+        </div>
+      </div>
     </div>`;
   updateStaticTranslations();
 }
@@ -2149,11 +2508,15 @@ function positionActiveDatePicker() {
 
 function openDp(anchorId, pairedId) {
   const today = new Date();
+  const currentValue = document.getElementById(anchorId)?.value || '';
+  const pairedValue = document.getElementById(pairedId)?.value || '';
+  const baseValue = currentValue || (anchorId.toLowerCase().includes('checkout') ? (dateState.checkin || pairedValue) : (dateState.checkin || pairedValue)) || '';
+  const baseDate = baseValue ? new Date(baseValue + 'T00:00:00') : today;
   dpCtx.anchorId   = anchorId;
   dpCtx.pairedId   = pairedId;
   dpCtx.isCheckout = anchorId.toLowerCase().includes('checkout') || anchorId === 'lcheckout';
-  dpCtx.y = today.getFullYear();
-  dpCtx.m = today.getMonth();
+  dpCtx.y = baseDate.getFullYear();
+  dpCtx.m = baseDate.getMonth();
 
   const dp = document.getElementById('customDp');
   if (!dp) return;
@@ -2236,7 +2599,7 @@ function renderDp() {
   for (let d = 1; d <= dim; d++) {
     const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const dt = new Date(y, m, d);
-    const dis = dt < today || (isCheckout && ciVal && ds <= ciVal);
+    const dis = dt < today || (isCheckout ? (ciVal && ds <= ciVal) : (coVal && ds >= coVal));
     let cls = 'dp-day';
     if (dis) cls += ' dp-dis';
     if (dt.toDateString() === today.toDateString()) cls += ' dp-today';
@@ -2252,6 +2615,23 @@ function renderDp() {
 // ── LANDING GUEST PICKER ─────────────────────────────
 const lgState = { guests: 1, rooms: 1 };
 let lgTouched = false;
+
+function resetLandingSearchBarState() {
+  lgTouched = false;
+  lgState.guests = 1;
+  lgState.rooms = 1;
+  const dest = document.getElementById('ldestInput');
+  if (dest) dest.value = '';
+  const ci = document.getElementById('lcheckin');
+  if (ci) ci.value = '';
+  const co = document.getElementById('lcheckout');
+  if (co) co.value = '';
+  const guestsCount = document.getElementById('lg_guests');
+  if (guestsCount) guestsCount.textContent = '1';
+  const roomsCount = document.getElementById('lg_rooms');
+  if (roomsCount) roomsCount.textContent = '1';
+  updateLGuestDisplay();
+}
 
 function toggleLGuestPicker() {
   const p = document.getElementById('lguestPicker');
@@ -2343,6 +2723,23 @@ function showToast(msg) {
 const guestState = { adults: 2, children: 0, rooms: 1 };
 let guestTouched = false;
 
+function resetSearchBarState() {
+  guestTouched = false;
+  dateState.checkin = null;
+  dateState.checkout = null;
+
+  const searchDest = document.getElementById('searchDest');
+  if (searchDest) searchDest.value = '';
+  const searchCheckin = document.getElementById('searchCheckin');
+  if (searchCheckin) searchCheckin.value = '';
+  const searchCheckout = document.getElementById('searchCheckout');
+  if (searchCheckout) searchCheckout.value = '';
+
+  setDpValue('searchCheckin', '');
+  setDpValue('searchCheckout', '');
+  updateSearchGuestDisplay();
+}
+
 function toggleGuestPicker() {
   const picker = document.getElementById('guestPicker');
   if (!picker) return;
@@ -2406,6 +2803,16 @@ function updateGuestDisplay() {
 function updateSearchGuestDisplay() {
   const el = document.getElementById('sGuestDisplay');
   if (!el) return;
+  if (!guestTouched) {
+    el.textContent = 'Add guests';
+    el.style.color = 'var(--muted)';
+    const adults = document.getElementById('sAdultsCount');
+    const rooms = document.getElementById('sRoomsCount');
+    if (adults) adults.textContent = guestState.adults;
+    if (rooms) rooms.textContent = guestState.rooms;
+    return;
+  }
+  el.style.color = 'var(--text)';
   const a = guestState.adults;
   const r = guestState.rooms;
   el.textContent = `${a} adult${a > 1 ? 's' : ''}, ${r} room${r > 1 ? 's' : ''}`;
@@ -2519,11 +2926,16 @@ function showMsg(id, show) {
   if (el) el.classList.toggle('show', show);
 }
 
+function setErrorText(id, text) {
+  const el = document.getElementById(id);
+  if (el && text !== undefined) el.textContent = text;
+}
+
 // ── LANDING PAGE ─────────────────────────────────
 function renderLandingGrid(hotels) {
   const grid = document.getElementById('landingHotelsGrid');
   if (!grid) return;
-  const list = (Array.isArray(hotels) && hotels.length ? hotels : DEMO_HOTELS).slice(0, 6);
+  const list = (Array.isArray(hotels) ? hotels : []).slice(0, 6);
   grid.innerHTML = list.map(h => {
     const stars = '★'.repeat(Math.min(5, parseInt(h.stars) || 4)) + '☆'.repeat(Math.max(0, 5 - (parseInt(h.stars) || 4)));
     const score = parseFloat(h.score) || 0;
@@ -2566,8 +2978,9 @@ function doLandingSearch() {
   const guests   = lgState.guests;
   const rooms    = lgState.rooms;
   guestState.adults = guests;
+  guestState.children = 0;
   guestState.rooms = rooms;
-  guestTouched = true;
+  guestTouched = lgTouched;
 
   showPage('searchPage');
 
@@ -2580,6 +2993,15 @@ function doLandingSearch() {
   const coEl = document.getElementById('sCheckout');
   if (coEl && checkout) { setDpValue('sCheckout', checkout); dateState.checkout = checkout; }
 
+  persistLastSearchState({
+    q: dest,
+    checkin,
+    checkout,
+    adults: guestState.adults,
+    children: guestState.children,
+    rooms: guestState.rooms,
+    guestTouched: detailGuestTouched ? '1' : '0',
+  });
   updateNightsDisplay();
   updateGuestDisplay();
   updateSearchGuestDisplay();

@@ -9,6 +9,12 @@ import ChatBot from '../components/ChatBot.jsx'
 import { searchHotels, getHotels } from '../services/api.js'
 import { DEMO_HOTELS } from '../data/demoHotels.js'
 import { useAuth } from '../context/AuthContext.jsx'
+import {
+  getHotelPriceValue,
+  hotelMatchesAmenitiesFilter,
+  hotelMatchesCityFilter,
+  parseNumericValue,
+} from '../utils/searchFilters.js'
 
 export default function SearchResultsPage() {
   const [params] = useSearchParams()
@@ -17,7 +23,7 @@ export default function SearchResultsPage() {
   const [loading, setLoading] = useState(true)
   const [sort, setSort] = useState(params.get('sort') || 'recommended')
   const [filters, setFilters] = useState({
-    city: 'All', amenities: [], minPrice: '', maxPrice: '', minRating: 0
+    city: 'all', amenities: [], minPrice: '', maxPrice: '', minRating: 0
   })
 
   const q = params.get('q') || ''
@@ -25,6 +31,20 @@ export default function SearchResultsPage() {
   const checkout = params.get('checkout') || ''
   const adults = params.get('adults') || '2'
   const rooms = params.get('rooms') || '1'
+  const guestTouched = params.get('guestTouched') || '0'
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem('bookhotel:lastSearch', JSON.stringify({
+        q,
+        checkin,
+        checkout,
+        adults,
+        rooms,
+        guestTouched,
+      }))
+    } catch {}
+  }, [q, checkin, checkout, adults, rooms, guestTouched])
 
   useEffect(() => {
     setLoading(true)
@@ -41,33 +61,46 @@ export default function SearchResultsPage() {
       .finally(() => setLoading(false))
   }, [q, checkin, checkout, adults, rooms])
 
-  const filtered = hotels.filter(h => {
-    if (filters.city !== 'All' && h.city !== filters.city) return false
+  const minPriceValue = parseNumericValue(filters.minPrice)
+  const maxPriceValue = parseNumericValue(filters.maxPrice)
+  const hasPriceError =
+    Number.isFinite(minPriceValue) &&
+    Number.isFinite(maxPriceValue) &&
+    minPriceValue > maxPriceValue
+
+  const filtered = hasPriceError
+    ? []
+    : hotels.filter(h => {
+    if (!hotelMatchesCityFilter(h, filters.city)) return false
     if (filters.minRating && parseFloat(h.score || 0) < filters.minRating) return false
-    if (filters.minPrice && (h.price_per_night || h.min_price || 0) < parseFloat(filters.minPrice)) return false
-    if (filters.maxPrice && (h.price_per_night || h.min_price || 0) > parseFloat(filters.maxPrice)) return false
-    if (filters.amenities.length > 0) {
-      const ha = Array.isArray(h.amenities) ? h.amenities : (h.amenities || '').split(',').map(a => a.trim())
-      if (!filters.amenities.every(a => ha.some(x => x.toLowerCase().includes(a.toLowerCase())))) return false
-    }
+    const hotelPrice = getHotelPriceValue(h)
+    if (Number.isFinite(minPriceValue) && (!Number.isFinite(hotelPrice) || hotelPrice < minPriceValue)) return false
+    if (Number.isFinite(maxPriceValue) && (!Number.isFinite(hotelPrice) || hotelPrice > maxPriceValue)) return false
+    if (!hotelMatchesAmenitiesFilter(h, filters.amenities)) return false
     return true
   })
 
   const sorted = [...filtered].sort((a, b) => {
     switch (sort) {
-      case 'price_asc': return (a.price_per_night || 0) - (b.price_per_night || 0)
-      case 'price_desc': return (b.price_per_night || 0) - (a.price_per_night || 0)
+      case 'price_asc': return (getHotelPriceValue(a) || 0) - (getHotelPriceValue(b) || 0)
+      case 'price_desc': return (getHotelPriceValue(b) || 0) - (getHotelPriceValue(a) || 0)
       case 'score_desc': return (parseFloat(b.score) || 0) - (parseFloat(a.score) || 0)
-      case 'name_asc': return a.name.localeCompare(b.name)
+      case 'name_asc': return (a.hotel_name || a.name || '').localeCompare(b.hotel_name || b.name || '')
       default: return 0
     }
   })
 
   return (
     <div>
-      {user ? <Navbar /> : <div style={{ position: 'relative' }}><LandingNavbar /></div>}
-      <div className="search-page-layout" style={{ marginTop: user ? 0 : 0 }}>
-        <FilterSidebar filters={filters} onChange={setFilters} />
+      {user ? (
+        <Navbar />
+      ) : (
+        <header className="search-topbar">
+          <LandingNavbar />
+        </header>
+      )}
+      <div className="search-page-layout">
+        <FilterSidebar filters={filters} onChange={setFilters} priceError={hasPriceError ? 'Min price cannot be greater than max price.' : ''} />
         <main className="s-main">
           <div className="s-result-info">{loading ? 'Searching...' : `${sorted.length} properties found`}</div>
           <h1 className="s-result-title">
@@ -82,7 +115,7 @@ export default function SearchResultsPage() {
           ) : sorted.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--sub)' }}>
               <div style={{ fontSize: 48, marginBottom: 16 }}>🏨</div>
-              <h3>No hotels found</h3>
+              <h3>No hotels found matching these filters.</h3>
               <p>Try adjusting your filters or search terms</p>
             </div>
           ) : (

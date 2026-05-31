@@ -12,11 +12,11 @@ import { DEMO_HOTELS } from '../data/demoHotels.js'
 const HERO_IMAGE = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=1600&q=80'
 
 const QUICK_FILTERS = [
-  { label: '🏖 Beachfront', q: 'Beach' },
-  { label: '🎰 Casino Resort', q: 'Casino' },
-  { label: '💆 Spa & Wellness', q: 'Spa' },
-  { label: '👨‍👩‍👧 Family Friendly', q: 'Family' },
-  { label: '🏔 Mountain View', q: 'Mountain' },
+  { label: 'Beachfront', q: 'Beach' },
+  { label: 'Casino Resort', q: 'Casino' },
+  { label: 'Spa & Wellness', q: 'Spa' },
+  { label: 'Family Friendly', q: 'Family' },
+  { label: 'Mountain View', q: 'Mountain' },
 ]
 
 export default function LandingPage() {
