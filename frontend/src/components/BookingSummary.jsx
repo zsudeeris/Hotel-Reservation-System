@@ -1,21 +1,28 @@
 import React from 'react'
 import { useBooking } from '../context/BookingContext.jsx'
 import { getHotelName } from '../utils/hotelRouting.js'
-import { getNights, normalizeRoomSelections, normalizeRoomPlans, roomPlanTotals, roomSelectionTotals } from '../utils/bookingState.js'
+import { getNights, normalizeRoomPlans, roomPlanTotals, roomSelectionTotals, validateRoomSelections } from '../utils/bookingState.js'
+
+function formatMoney(value) {
+  return `EUR ${Number(value || 0).toFixed(0)}`
+}
 
 export default function BookingSummary({ showTotal = true }) {
-  const { selectedHotel, dateState, guestState, roomPlans, roomSelections } = useBooking()
+  const { selectedHotel, dateState, guestState, roomPlans, roomSelections, extras } = useBooking()
 
   const checkin = dateState?.checkin ? new Date(dateState.checkin) : null
   const checkout = dateState?.checkout ? new Date(dateState.checkout) : null
-  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const nights = getNights(dateState?.checkin, dateState?.checkout)
+  const hasValidDates = Boolean(dateState?.checkin && dateState?.checkout && checkout > checkin)
   const resolvedRoomPlans = normalizeRoomPlans(roomPlans || [{ adults: guestState?.adults || 2, children: guestState?.children || 0 }])
   const totals = roomPlanTotals(resolvedRoomPlans)
-  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
-  const calculated = roomSelectionTotals(resolvedRoomSelections, nights)
+  const roomValidation = validateRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const resolvedRoomSelections = roomValidation.selections
+  const calculated = roomValidation.isValid ? roomSelectionTotals(resolvedRoomSelections, nights) : { roomTotal: 0 }
   const roomTotal = calculated.roomTotal
-  const taxes = calculated.taxes
-  const grandTotal = calculated.grandTotal
+  const airportPickupFee = extras?.airportPickup ? 25 : 0
+  const extrasTotal = airportPickupFee
+  const finalTotal = roomTotal + extrasTotal
 
   const fmt = (d) => d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
@@ -37,7 +44,7 @@ export default function BookingSummary({ showTotal = true }) {
       <div className="order-dates">
         {fmt(checkin)} → {fmt(checkout)}
       </div>
-      <div className="order-checkin">{nights} night{nights !== 1 ? 's' : ''}</div>
+      <div className="order-checkin">{hasValidDates ? `${nights} night${nights !== 1 ? 's' : ''}` : 'Select dates to see total'}</div>
 
       <div className="order-guests-row">
         {totals.roomCount} Room{totals.roomCount !== 1 ? 's' : ''} · {totals.totalGuests} Guest{totals.totalGuests !== 1 ? 's' : ''}
@@ -51,7 +58,7 @@ export default function BookingSummary({ showTotal = true }) {
               {selection.adults} adult{selection.adults !== 1 ? 's' : ''}{selection.children ? `, ${selection.children} child${selection.children !== 1 ? 'ren' : ''}` : ''}
             </div>
             <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 4, fontWeight: 600 }}>
-              {selection.room?.room_type || selection.roomType || 'Unavailable'}
+              {selection.room?.room_type || selection.roomType || 'Room type required'}
             </div>
           </div>
         )) : (
@@ -88,17 +95,21 @@ export default function BookingSummary({ showTotal = true }) {
 
       {showTotal && (
         <>
-          <div className="price-line">
-            <span className="price-lbl">Selected rooms × {nights} nights</span>
-            <span className="price-curr">${roomTotal}</span>
+          <div style={{ display: 'grid', gap: 6, marginBottom: 10, fontSize: 12.5 }}>
+            {extras?.airportPickup ? (
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ color: 'var(--sub)' }}>Airport pickup shuttle</span>
+                <strong style={{ color: 'var(--text)' }}>EUR {airportPickupFee.toFixed(0)}</strong>
+              </div>
+            ) : null}
           </div>
           <div className="price-line">
-            <span className="price-lbl">Taxes & fees (10%)</span>
-            <span className="price-curr">${taxes}</span>
+            <span className="price-lbl">{roomValidation.isValid ? `Selected rooms × ${nights} nights` : 'Select a room type for each room to see total'}</span>
+            <span className="price-curr">{roomValidation.isValid ? formatMoney(roomTotal) : 'EUR 0'}</span>
           </div>
           <div className="price-total-line">
             <span className="price-total-lbl">Total</span>
-            <span className="price-total-val">${grandTotal}</span>
+            <span className="price-total-val">{roomValidation.isValid ? formatMoney(finalTotal) : 'EUR 0'}</span>
           </div>
         </>
       )}

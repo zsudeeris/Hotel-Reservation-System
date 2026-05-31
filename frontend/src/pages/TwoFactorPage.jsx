@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Building2, Shield } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { resend2FA } from '../services/api.js'
+import { clearStoredReturnTo, getStoredReturnTo } from '../utils/authRedirect.js'
 
 export default function TwoFactorPage() {
   const navigate = useNavigate()
@@ -54,9 +55,11 @@ export default function TwoFactorPage() {
       if (!data.success) { setError(data.message || 'Invalid or expired code.'); return }
       // After verify2FA, AuthContext fetches /api/me and sets user
       // Route by role returned in verify response
-      if (data.role === 'ADMIN') navigate('/admin')
-      else if (data.role === 'HOTEL_MANAGER') navigate('/manager')
-      else navigate('/home')
+      const returnTo = getStoredReturnTo()
+      clearStoredReturnTo()
+      if (data.role === 'ADMIN') navigate('/admin', { replace: true })
+      else if (data.role === 'HOTEL_MANAGER') navigate('/manager', { replace: true })
+      else navigate(returnTo || '/home', { replace: true })
     } catch {
       setError('Invalid code. Please try again.')
     } finally {

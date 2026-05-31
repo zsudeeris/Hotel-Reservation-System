@@ -35,11 +35,20 @@ export default function PaymentForm({ onSubmit }) {
     const d = val.replace(/\D/g, '').slice(0, 4)
     return d.length >= 2 ? d.slice(0, 2) + '/' + d.slice(2) : d
   }
+  const formatCvv = (val) => val.replace(/\D/g, '').slice(0, 3)
 
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!agree) { setError('Please agree to the terms to continue.'); return }
-    if (!card.number || !card.holder || !card.expiry || !card.cvv) {
+    if (!card.number || !card.holder || !card.expiry || !/^\d{3}$/.test(card.cvv)) {
+      setError('CVV must be 3 digits.')
+      return
+    }
+    if (tab === 'multi' && (!card2.number || !card2.holder || !card2.expiry || !/^\d{3}$/.test(card2.cvv))) {
+      setError('CVV must be 3 digits.')
+      return
+    }
+    if (tab === 'multi' && !card2.amount) {
       setError('Please fill in all card details.')
       return
     }
@@ -88,9 +97,11 @@ export default function PaymentForm({ onSubmit }) {
               className="form-inp"
               placeholder="CVV"
               type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
               value={card.cvv}
-              onChange={e => setCard(c => ({ ...c, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
-              maxLength={4}
+              onChange={e => setCard(c => ({ ...c, cvv: formatCvv(e.target.value) }))}
+              maxLength={3}
             />
           </div>
         </div>
@@ -105,7 +116,7 @@ export default function PaymentForm({ onSubmit }) {
             <input className="form-inp" placeholder="Cardholder name" value={card2.holder} onChange={e => setCard2(c => ({ ...c, holder: e.target.value }))} />
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
               <input className="form-inp" placeholder="MM/YY" value={card2.expiry} onChange={e => setCard2(c => ({ ...c, expiry: formatExpiry(e.target.value) }))} maxLength={5} />
-              <input className="form-inp" placeholder="CVV" type="password" value={card2.cvv} onChange={e => setCard2(c => ({ ...c, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) }))} maxLength={4} />
+              <input className="form-inp" placeholder="CVV" type="password" inputMode="numeric" pattern="[0-9]*" value={card2.cvv} onChange={e => setCard2(c => ({ ...c, cvv: formatCvv(e.target.value) }))} maxLength={3} />
               <input className="form-inp" placeholder="Amount $" type="number" value={card2.amount} onChange={e => setCard2(c => ({ ...c, amount: e.target.value }))} />
             </div>
           </div>

@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext.jsx'
 import { BookingProvider } from './context/BookingContext.jsx'
 import { WishlistProvider } from './context/WishlistContext.jsx'
@@ -25,11 +25,17 @@ import AdminDashboardPage from './pages/AdminDashboardPage.jsx'
 import ManagerDashboardPage from './pages/ManagerDashboardPage.jsx'
 import NotFoundPage from './pages/NotFoundPage.jsx'
 import AppErrorBoundary from './components/AppErrorBoundary.jsx'
+import { setStoredReturnTo } from './utils/authRedirect.js'
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="page-loading">Loading...</div>
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) {
+    const returnTo = `${location.pathname}${location.search || ''}`
+    setStoredReturnTo(returnTo)
+    return <Navigate to="/login" replace state={{ returnTo }} />
+  }
   return children
 }
 

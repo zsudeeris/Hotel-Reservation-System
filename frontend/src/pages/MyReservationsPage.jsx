@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Calendar, MapPin, XCircle, CheckCircle, Clock } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
-import { getReservations, cancelReservation } from '../services/api.js'
+import { getReservations, cancelReservation, deleteReservation } from '../services/api.js'
 import { getHotelDetailPath } from '../utils/hotelRouting.js'
 import { useToast } from '../hooks/useToast.js'
 
@@ -45,7 +45,28 @@ export default function MyReservationsPage() {
     }
   }
 
-  const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const handleRemove = async (id) => {
+    if (!confirm('Remove this cancelled reservation from your list?')) return
+    setCancelling(id)
+    try {
+      const data = await deleteReservation(id)
+      if (data.error) { showToast('Failed to remove: ' + data.error); return }
+      setReservations(rs => rs.filter(r => r.id !== id))
+      showToast('Reservation removed from your list.')
+    } catch (err) {
+      console.error('Failed to remove reservation:', err)
+      showToast(err?.message || 'Failed to remove reservation.')
+    } finally {
+      setCancelling(null)
+    }
+  }
+
+  const fmt = (d) => {
+    if (!d) return '—'
+    const date = new Date(d)
+    if (Number.isNaN(date.getTime())) return '—'
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+  }
   const parseAllocations = (value) => {
     if (!value) return []
     if (Array.isArray(value)) return value
@@ -101,7 +122,7 @@ export default function MyReservationsPage() {
                       </div>
                       <div style={{ fontSize: 13, color: 'var(--sub)', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <MapPin style={{ width: 13, height: 13 }} />
-                        {res.hotel_city || res.hotel?.city || 'Northern Cyprus'}
+                        {[res.hotel_city || res.hotel?.city, res.hotel_district || res.hotel?.district].filter(Boolean).join(', ') || 'Northern Cyprus'}
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
@@ -113,11 +134,11 @@ export default function MyReservationsPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, padding: '16px 0', borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', marginBottom: 16 }}>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Check-in</div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{fmt(res.checkin_date || res.check_in)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{fmt(res.check_in_date || res.checkin_date || res.check_in)}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Check-out</div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{fmt(res.checkout_date || res.check_out)}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{fmt(res.check_out_date || res.checkout_date || res.check_out)}</div>
                     </div>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Room</div>
@@ -125,7 +146,7 @@ export default function MyReservationsPage() {
                     </div>
                     <div>
                       <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Total</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>${res.total_price || res.amount || '—'}</div>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--green)' }}>{res.total_price || res.amount ? `EUR ${Number(res.total_price || res.amount).toFixed(0)}` : '—'}</div>
                     </div>
                   </div>
 
@@ -143,7 +164,7 @@ export default function MyReservationsPage() {
                     </div>
                   )}
 
-                  {status !== 'cancelled' && (
+                  {status !== 'cancelled' ? (
                     <div style={{ display: 'flex', gap: 10 }}>
                       <button
                         onClick={() => {
@@ -160,6 +181,25 @@ export default function MyReservationsPage() {
                         style={{ padding: '9px 20px', border: '1.5px solid var(--red)', borderRadius: 9, background: 'var(--white)', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--red)', opacity: cancelling === res.id ? 0.6 : 1 }}
                       >
                         {cancelling === res.id ? 'Cancelling...' : 'Cancel Reservation'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <button
+                        onClick={() => {
+                          const hotelPath = getHotelDetailPath({ id: res.hotel_id || res.hotel?.id }, location.search)
+                          if (hotelPath) navigate(hotelPath)
+                        }}
+                        style={{ padding: '9px 20px', border: '1.5px solid var(--border)', borderRadius: 9, background: 'var(--white)', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--text)' }}
+                      >
+                        View Hotel
+                      </button>
+                      <button
+                        onClick={() => handleRemove(res.id)}
+                        disabled={cancelling === res.id}
+                        style={{ padding: '9px 20px', border: '1.5px solid var(--red)', borderRadius: 9, background: 'transparent', fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--red)', opacity: cancelling === res.id ? 0.6 : 1 }}
+                      >
+                        {cancelling === res.id ? 'Removing...' : 'Remove from list'}
                       </button>
                     </div>
                   )}

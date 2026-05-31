@@ -186,6 +186,16 @@ def ensure_reservation_special_requests_column():
 ensure_reservation_special_requests_column()
 
 
+def ensure_reservation_guest_nationality_column():
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN guest_nationality VARCHAR(100) DEFAULT NULL", commit=True)
+    except Exception:
+        pass
+
+
+ensure_reservation_guest_nationality_column()
+
+
 def ensure_reservation_room_plan_columns():
     try:
         run_query("ALTER TABLE reservations ADD COLUMN room_count INT DEFAULT 1", commit=True)
@@ -206,6 +216,16 @@ def ensure_reservation_room_plan_columns():
 
 
 ensure_reservation_room_plan_columns()
+
+
+def ensure_reservation_deleted_column():
+    try:
+        run_query("ALTER TABLE reservations ADD COLUMN is_deleted TINYINT(1) DEFAULT 0", commit=True)
+    except Exception:
+        pass
+
+
+ensure_reservation_deleted_column()
 
 
 # ── AUTH ─────────────────────────────────────────
@@ -412,8 +432,8 @@ def manager_stats():
     if session.get("role") not in ("HOTEL_MANAGER", "ADMIN"):
         return jsonify(success=False, message="Yetki yok."), 403
     stats = {
-        "total_reservations": (run_query("SELECT COUNT(*) as c FROM reservations WHERE status='CONFIRMED'", fetchone=True) or {}).get("c", 0),
-        "total_revenue":      (run_query("SELECT COALESCE(SUM(total_price),0) as s FROM reservations WHERE status='CONFIRMED'", fetchone=True) or {}).get("s", 0),
+        "total_reservations": (run_query("SELECT COUNT(*) as c FROM reservations WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0", fetchone=True) or {}).get("c", 0),
+        "total_revenue":      (run_query("SELECT COALESCE(SUM(total_price),0) as s FROM reservations WHERE status='CONFIRMED' AND COALESCE(is_deleted,0)=0", fetchone=True) or {}).get("s", 0),
         "occupancy_rate":     78,
     }
     return jsonify(stats)
@@ -428,6 +448,7 @@ def manager_reservations():
            FROM reservations r
            LEFT JOIN hotels h  ON r.hotel_id = h.id
            LEFT JOIN rooms  rm ON r.room_id  = rm.id
+           WHERE COALESCE(r.is_deleted,0)=0
            ORDER BY r.created_at DESC LIMIT 20""",
         fetchall=True,
     )
@@ -622,6 +643,7 @@ def get_hotel_rooms(hotel_id):
 @app.route("/api/reservations", methods=["POST"])
 def create_reservation():
     data     = request.get_json() or {}
+    print("Reservation payload:", data)
     user_id  = session.get("user_id")
     room_id  = data.get("room_id")
     hotel_id = data.get("hotel_id")
@@ -631,6 +653,7 @@ def create_reservation():
     guest_name  = data.get("guest_name", "")
     guest_email = data.get("guest_email", "")
     guest_phone = data.get("guest_phone", "")
+    guest_nationality = (data.get("guest_nationality") or "").strip() or None
     special_requests = (data.get("special_requests") or "").strip() or None
     room_count = int(data.get("room_count") or data.get("rooms") or 1)
     total_adults = int(data.get("total_adults") or data.get("adults") or 0)
@@ -682,8 +705,9 @@ def create_reservation():
                    AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
                 (room["id"], checkin, checkout), fetchone=True,
             )
+            print("Availability check:", hotel_id, room["id"], checkin, checkout, "conflict=", bool(conflict))
             if conflict:
-                return jsonify(success=False, message="Seçilen tarihlerde oda müsait değil."), 409
+                return jsonify(success=False, message="Selected room is not available for these dates."), 409
 
             alloc_adults = int(allocation.get("adults") or 0)
             alloc_children = int(allocation.get("children") or 0)
@@ -720,8 +744,9 @@ def create_reservation():
                AND NOT (check_out_date <= %s OR check_in_date >= %s)""",
             (room_id, checkin, checkout), fetchone=True,
         )
+        print("Availability check:", hotel_id, room_id, checkin, checkout, "conflict=", bool(conflict))
         if conflict:
-            return jsonify(success=False, message="Seçilen tarihlerde oda müsait değil."), 409
+            return jsonify(success=False, message="Selected room is not available for these dates."), 409
 
         if guests and int(room.get("capacity") or 0) < int(guests):
             return jsonify(success=False, message="Seçilen oda kapasiteyi karşılamıyor."), 400
@@ -735,11 +760,11 @@ def create_reservation():
     new_id = run_query(
         """INSERT INTO reservations
            (user_id, hotel_id, room_id, check_in_date, check_out_date,
-            guest_count, total_price, guest_name, guest_email, guest_phone, special_requests,
+            guest_count, total_price, guest_name, guest_email, guest_phone, guest_nationality, special_requests,
             room_count, total_adults, total_children, room_allocations, reservation_source)
-           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
         (user_id, hotel_id, room_id, checkin, checkout,
-         guests, grand_total, guest_name, guest_email, guest_phone, special_requests,
+         guests, grand_total, guest_name, guest_email, guest_phone, guest_nationality, special_requests,
          room_count, total_adults, total_children, room_allocations, source),
         commit=True, return_lastrowid=True,
     )
@@ -760,21 +785,22 @@ def get_reservations():
     if role == "ADMIN":
         reservations = run_query(
             """SELECT r.*, u.name as user_name, u.email as user_email,
-                      rm.room_type, rm.room_number, h.hotel_name
+                      rm.room_type, rm.room_number, h.hotel_name, h.city as hotel_city, h.district as hotel_district
                FROM reservations r
                LEFT JOIN users u  ON r.user_id = u.id
                LEFT JOIN rooms rm ON r.room_id  = rm.id
                LEFT JOIN hotels h ON r.hotel_id = h.id
+               WHERE COALESCE(r.is_deleted,0)=0
                ORDER BY r.created_at DESC LIMIT 100""",
             fetchall=True,
         )
     else:
         reservations = run_query(
-            """SELECT r.*, rm.room_type, rm.room_number, h.hotel_name
+            """SELECT r.*, rm.room_type, rm.room_number, h.hotel_name, h.city as hotel_city, h.district as hotel_district
                FROM reservations r
                LEFT JOIN rooms rm ON r.room_id  = rm.id
                LEFT JOIN hotels h ON r.hotel_id = h.id
-               WHERE r.user_id=%s ORDER BY r.created_at DESC""",
+               WHERE r.user_id=%s AND COALESCE(r.is_deleted,0)=0 ORDER BY r.created_at DESC""",
             (user_id,), fetchall=True,
         )
     return jsonify(reservations or [])
@@ -797,6 +823,28 @@ def cancel_reservation(res_id):
 
     run_query("UPDATE reservations SET status='CANCELLED' WHERE id=%s", (res_id,), commit=True)
     return jsonify(success=True, message="Rezervasyon iptal edildi.")
+
+
+@app.route("/api/reservations/<int:res_id>", methods=["DELETE"])
+def delete_reservation(res_id):
+    user_id = session.get("user_id")
+    role = session.get("role")
+
+    if not user_id:
+        return jsonify(success=False, message="Giriş yapılmamış."), 401
+
+    res = run_query("SELECT * FROM reservations WHERE id=%s", (res_id,), fetchone=True)
+    if not res:
+        return jsonify(success=False, message="Rezervasyon bulunamadı."), 404
+
+    if role != "ADMIN" and res["user_id"] != user_id:
+        return jsonify(success=False, message="Yetki yok."), 403
+
+    if (res.get("status") or "").upper() != "CANCELLED":
+        return jsonify(success=False, message="Only cancelled reservations can be removed from the list."), 400
+
+    run_query("UPDATE reservations SET is_deleted=1 WHERE id=%s", (res_id,), commit=True)
+    return jsonify(success=True, message="Rezervasyon listeden kaldırıldı.")
 
 
 # ── PAYMENT ───────────────────────────────────────
@@ -1063,4 +1111,4 @@ def chatbot_status():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="127.0.0.1", port=int(os.environ.get("PORT", 5050)))

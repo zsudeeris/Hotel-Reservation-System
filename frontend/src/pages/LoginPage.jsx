@@ -1,16 +1,27 @@
-import React, { useState } from 'react'
-import { useNavigate, Link, Navigate } from 'react-router-dom'
+import React, { useEffect, useState } from 'react'
+import { useNavigate, Link, Navigate, useLocation } from 'react-router-dom'
 import { Building2, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { clearStoredReturnTo, setStoredReturnTo } from '../utils/authRedirect.js'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, user } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const returnTo = location.state?.returnTo
+    if (typeof returnTo === 'string' && returnTo.startsWith('/')) {
+      setStoredReturnTo(returnTo)
+    } else {
+      clearStoredReturnTo()
+    }
+  }, [location.state])
 
   if (user) return <Navigate to="/home" replace />
 

@@ -3,17 +3,20 @@ import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Calendar, Home } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
-import { getNights, normalizeRoomSelections, normalizeRoomPlans, roomPlanTotals } from '../utils/bookingState.js'
+import { getHotelName } from '../utils/hotelRouting.js'
+import { getNights, normalizeRoomPlans, roomPlanTotals, validateRoomSelections } from '../utils/bookingState.js'
 
 export default function PaymentSuccessPage() {
   const navigate = useNavigate()
-  const { selectedHotel, selectedRoom, dateState, roomPlans, roomSelections, reservationId, totalPrice, guestState } = useBooking()
+  const { selectedHotel, selectedRoom, dateState, roomPlans, roomSelections, reservationId, totalPrice, guestState, extras } = useBooking()
 
   const fmt = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const nights = getNights(dateState?.checkin, dateState?.checkout)
   const resolvedRoomPlans = normalizeRoomPlans(roomPlans || [{ adults: guestState?.adults || 2, children: guestState?.children || 0 }])
   const totals = roomPlanTotals(resolvedRoomPlans)
-  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const roomValidation = validateRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const resolvedRoomSelections = roomValidation.selections
+  const totalPaid = Number(totalPrice || 0)
 
   return (
     <div style={{ background: 'var(--bg)', minHeight: '100vh' }}>
@@ -43,13 +46,13 @@ export default function PaymentSuccessPage() {
             </div>
             <div className="confirm-row">
               <span className="confirm-row-lbl">Hotel</span>
-              <span className="confirm-row-val">{selectedHotel?.name || '—'}</span>
+              <span className="confirm-row-val">{getHotelName(selectedHotel) || '—'}</span>
             </div>
             <div className="confirm-row">
               <span className="confirm-row-lbl">Room</span>
               <span className="confirm-row-val">
                 {resolvedRoomSelections.length
-                  ? resolvedRoomSelections.map((selection, index) => `Room ${index + 1}: ${selection.room?.room_type || selection.roomType || 'Unavailable'}`).join(' · ')
+                  ? resolvedRoomSelections.map((selection, index) => `Room ${index + 1}: ${selection.room?.room_type || selection.roomType || 'Room type required'}`).join(' · ')
                   : selectedRoom?.room_type || selectedRoom?.name || 'Standard Room'}
               </span>
             </div>
@@ -61,7 +64,7 @@ export default function PaymentSuccessPage() {
               <span className="confirm-row-lbl">Room Breakdown</span>
               <span className="confirm-row-val">
                 {resolvedRoomSelections.length
-                  ? resolvedRoomSelections.map((room, index) => `Room ${index + 1}: ${room.adults} adult${room.adults !== 1 ? 's' : ''}${room.children ? `, ${room.children} child${room.children !== 1 ? 'ren' : ''}` : ''} — ${room.room?.room_type || room.roomType || 'Unavailable'}`).join(' · ')
+                  ? resolvedRoomSelections.map((room, index) => `Room ${index + 1}: ${room.adults} adult${room.adults !== 1 ? 's' : ''}${room.children ? `, ${room.children} child${room.children !== 1 ? 'ren' : ''}` : ''} — ${room.room?.room_type || room.roomType || 'Room type required'}`).join(' · ')
                   : '1 room, 2 adults'}
               </span>
             </div>
@@ -75,11 +78,17 @@ export default function PaymentSuccessPage() {
             </div>
             <div className="confirm-row">
               <span className="confirm-row-lbl">Duration</span>
-              <span className="confirm-row-val">{nights} night{nights !== 1 ? 's' : ''}</span>
+              <span className="confirm-row-val">{nights ? `${nights} night${nights !== 1 ? 's' : ''}` : '—'}</span>
             </div>
+            {extras?.airportPickup && (
+              <div className="confirm-row">
+                <span className="confirm-row-lbl">Airport pickup shuttle</span>
+                <span className="confirm-row-val">EUR 25</span>
+              </div>
+            )}
             <div className="confirm-row">
               <span className="confirm-row-lbl">Total Paid</span>
-              <span className="confirm-row-val big">${totalPrice || '—'}</span>
+              <span className="confirm-row-val big">{totalPaid ? `EUR ${totalPaid.toFixed(0)}` : '—'}</span>
             </div>
           </div>
 

@@ -69,6 +69,7 @@ CREATE TABLE reservations (
   guest_name VARCHAR(200) DEFAULT NULL,
   guest_email VARCHAR(200) DEFAULT NULL,
   guest_phone VARCHAR(50) DEFAULT NULL,
+  guest_nationality VARCHAR(100) DEFAULT NULL,
   special_requests TEXT DEFAULT NULL,
   room_count INT DEFAULT 1,
   total_adults INT DEFAULT 0,

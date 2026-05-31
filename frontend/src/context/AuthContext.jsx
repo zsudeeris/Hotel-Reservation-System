@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import * as api from '../services/api.js'
+import { clearStoredReturnTo } from '../utils/authRedirect.js'
 
 const AuthContext = createContext(null)
 
@@ -56,6 +57,7 @@ export function AuthProvider({ children }) {
     setUser(null)
     setPendingEmail(null)
     setPendingCode(null)
+    clearStoredReturnTo()
   }
 
   return (

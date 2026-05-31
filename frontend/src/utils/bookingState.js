@@ -47,6 +47,7 @@ export function filterRoomsByCapacity(rooms, guestCount) {
   const guests = Math.max(1, parseInt(guestCount, 10) || 1)
   const list = Array.isArray(rooms) ? rooms : []
   return list
+    .filter(room => room?.available !== false)
     .filter(room => getRoomCapacity(room) >= guests)
     .sort((a, b) => {
       const capDiff = getRoomCapacity(a) - getRoomCapacity(b)
@@ -57,10 +58,11 @@ export function filterRoomsByCapacity(rooms, guestCount) {
     })
 }
 
-export function buildRoomSelection(room, roomPlan, index) {
+export function buildRoomSelection(room, roomPlan, index, roomDraftId = null) {
   if (!room) {
     return {
       index,
+      roomDraftId,
       roomId: null,
       room: null,
       roomType: null,
@@ -74,6 +76,7 @@ export function buildRoomSelection(room, roomPlan, index) {
 
   return {
     index,
+    roomDraftId,
     roomId: room.id ?? null,
     room: {
       ...room,
@@ -101,15 +104,32 @@ export function normalizeRoomSelections(roomSelections, roomPlans, rooms) {
     const matched = eligibleRooms.find(room => String(room.id) === String(existingId))
 
     if (matched) {
-      return buildRoomSelection(matched, plan, index)
+      return buildRoomSelection(matched, plan, index, existing.roomDraftId ?? existing.draftId ?? null)
     }
 
     if (existing?.room && getRoomCapacity(existing.room) >= requiredGuests) {
-      return buildRoomSelection(existing.room, plan, index)
+      return buildRoomSelection(existing.room, plan, index, existing.roomDraftId ?? existing.draftId ?? null)
     }
 
-    return buildRoomSelection(eligibleRooms[0] || null, plan, index)
+    return buildRoomSelection(null, plan, index, existing.roomDraftId ?? existing.draftId ?? null)
   })
+}
+
+export function validateRoomSelections(roomSelections, roomPlans, rooms) {
+  const plans = normalizeRoomPlans(roomPlans)
+  const selections = normalizeRoomSelections(roomSelections, plans, rooms)
+
+  const firstInvalidIndex = selections.findIndex((selection, index) => {
+    if (!selection?.room) return true
+    return getRoomCapacity(selection.room) < getRoomGuestCount(plans[index])
+  })
+
+  return {
+    selections,
+    isValid: firstInvalidIndex === -1,
+    firstInvalidIndex,
+    firstInvalidRoomNumber: firstInvalidIndex >= 0 ? firstInvalidIndex + 1 : null,
+  }
 }
 
 export function roomSelectionTotals(roomSelections, nights, taxRate = 0.1) {

@@ -7,13 +7,15 @@ function roomLabel(room) {
   return room?.room_type || room?.name || 'Room'
 }
 
-export default function AvailableRooms({ rooms = [], roomPlans = [], roomSelections = [], nights = 1, onSelectRoom }) {
+export default function AvailableRooms({ rooms = [], roomsByPlan = [], roomPlans = [], roomSelections = [], selectionErrors = [], nights = 1, onSelectRoom }) {
   return (
     <div style={{ display: 'grid', gap: 18 }}>
       {roomPlans.map((plan, index) => {
         const guests = getRoomGuestCount(plan)
-        const eligibleRooms = filterRoomsByCapacity(rooms, guests)
+        const planRooms = Array.isArray(roomsByPlan?.[index]) && roomsByPlan[index].length ? roomsByPlan[index] : rooms
+        const eligibleRooms = filterRoomsByCapacity(planRooms, guests)
         const selectedRoom = roomSelections?.[index]?.room || null
+        const roomError = selectionErrors?.[index] || ''
 
         return (
           <section key={`available-rooms-${index}`} style={{ display: 'grid', gap: 12 }}>
@@ -34,6 +36,11 @@ export default function AvailableRooms({ rooms = [], roomPlans = [], roomSelecti
                 </div>
               )}
             </div>
+            {roomError && (
+              <div style={{ color: 'var(--red)', fontSize: 12.5, lineHeight: 1.45, marginTop: -4 }}>
+                {roomError}
+              </div>
+            )}
 
             {eligibleRooms.length > 0 ? (
               <div style={{ display: 'grid', gap: 10 }}>
@@ -45,6 +52,7 @@ export default function AvailableRooms({ rooms = [], roomPlans = [], roomSelecti
                     roomCount={1}
                     selected={String(room.id) === String(selectedRoom?.id)}
                     buttonLabel={String(room.id) === String(selectedRoom?.id) ? 'Selected' : 'Select room'}
+                    disabled={String(room.id) === String(selectedRoom?.id)}
                     onBook={() => onSelectRoom(index, room)}
                   />
                 ))}

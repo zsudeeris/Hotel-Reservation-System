@@ -39,6 +39,7 @@ const postJSON = (url, data, method = 'POST') =>
 export const getHotels = () => requestJSON('/api/hotels')
 export const searchHotels = (params) => requestJSON('/api/hotels/search?' + new URLSearchParams(params))
 export const getHotel = (id) => requestJSON('/api/hotels/' + id)
+export const getHotelRooms = (id, params = {}) => requestJSON('/api/hotels/' + id + '/rooms?' + new URLSearchParams(params))
 export const getHotelReviews = (id) => requestJSON('/api/hotels/' + id + '/reviews')
 
 // Auth
@@ -53,6 +54,7 @@ export const getMe = () => requestJSON('/api/me')
 export const createReservation = (data) => postJSON('/api/reservations', data)
 export const getReservations = () => requestJSON('/api/reservations')
 export const cancelReservation = (id) => requestJSON('/api/reservations/' + id + '/cancel', { method: 'POST' })
+export const deleteReservation = (id) => requestJSON('/api/reservations/' + id, { method: 'DELETE' })
 
 // Payment
 export const processPayment = (data) => postJSON('/api/payments', data)

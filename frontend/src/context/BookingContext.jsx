@@ -26,6 +26,7 @@ export function BookingProvider({ children }) {
   }))
   const [roomSelections, setRoomSelections] = useState(() => Array.isArray(snapshot?.roomSelections) ? snapshot.roomSelections : [])
   const [specialRequests, setSpecialRequests] = useState(snapshot?.specialRequests || '')
+  const [extras, setExtras] = useState(snapshot?.extras || { earlyCheckin: false, lateCheckout: false, airportPickup: false })
   const [reservationId, setReservationId] = useState(null)
   const [totalPrice, setTotalPrice] = useState(snapshot?.totalPrice || 0)
 
@@ -40,13 +41,11 @@ export function BookingProvider({ children }) {
   }, [selectedHotel?.id, roomPlans])
 
   useEffect(() => {
-    if (roomSelections && roomSelections.length > 0) {
-      const firstRoom = roomSelections.map(selection => selection?.room).find(Boolean) || null
-      if (firstRoom && selectedRoom?.id !== firstRoom.id) {
-        setSelectedRoom(firstRoom)
-      }
+    const firstRoom = roomSelections.map(selection => selection?.room).find(Boolean) || null
+    if ((firstRoom?.id ?? null) !== (selectedRoom?.id ?? null)) {
+      setSelectedRoom(firstRoom)
     }
-  }, [roomSelections])
+  }, [roomSelections, selectedRoom])
 
   useEffect(() => {
     const next = {
@@ -57,18 +56,19 @@ export function BookingProvider({ children }) {
       roomPlans,
       roomSelections,
       specialRequests,
+      extras,
       reservationId,
       totalPrice,
     }
     try {
       window.sessionStorage.setItem('bookhotel:bookingState', JSON.stringify(next))
     } catch {}
-  }, [selectedHotel, selectedRoom, dateState, guestState, roomPlans, roomSelections, specialRequests, reservationId, totalPrice])
+  }, [selectedHotel, selectedRoom, dateState, guestState, roomPlans, roomSelections, specialRequests, extras, reservationId, totalPrice])
 
   return (
     <BookingContext.Provider value={{
-      selectedHotel, selectedRoom, dateState, guestState, roomPlans, roomSelections, specialRequests, reservationId, totalPrice,
-      setHotel, setRoom, setDates, setGuests, setRoomPlans, setRoomSelections, setSpecialRequests, setReservationId, setTotalPrice,
+      selectedHotel, selectedRoom, dateState, guestState, roomPlans, roomSelections, specialRequests, extras, reservationId, totalPrice,
+      setHotel, setRoom, setDates, setGuests, setRoomPlans, setRoomSelections, setSpecialRequests, setExtras, setReservationId, setTotalPrice,
       roomPlanTotals: () => roomPlanTotals(roomPlans),
     }}>
       {children}

@@ -3,10 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { Plane, Car, Plus, Trash2 } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import BookingSummary from '../components/BookingSummary.jsx'
+import NationalityAutocomplete from '../components/NationalityAutocomplete.jsx'
+import BookingDatePicker from '../components/BookingDatePicker.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
-import { createReservation } from '../services/api.js'
+import { createReservation, getHotelRooms } from '../services/api.js'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getNights, normalizeRoomPlans, normalizeRoomSelections, roomPlanTotals, roomSelectionTotals } from '../utils/bookingState.js'
+import { getNights, normalizeRoomPlans, roomPlanTotals, roomSelectionTotals, validateRoomSelections } from '../utils/bookingState.js'
+import { normalizeNationalityInput } from '../utils/nationality.js'
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 
 export default function BookingPage() {
   const navigate = useNavigate()
@@ -18,6 +23,7 @@ export default function BookingPage() {
     roomPlans,
     roomSelections,
     specialRequests,
+    setExtras: setBookingExtras,
     setSpecialRequests,
     setReservationId,
     setTotalPrice
@@ -41,32 +47,94 @@ export default function BookingPage() {
   const [extras, setExtras] = useState({ earlyCheckin: false, lateCheckout: false, airportPickup: false })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [emailTouched, setEmailTouched] = useState(false)
+  const [emailError, setEmailError] = useState('')
 
   const set = (k) => (e) => setGuestInfo(g => ({ ...g, [k]: e.target.value }))
-  const setExtra = (k) => (e) => setExtras(ex => ({ ...ex, [k]: e.target.checked }))
+  const handleEmailChange = (e) => {
+    const nextEmail = e.target.value
+    setGuestInfo(g => ({ ...g, email: nextEmail }))
+    if (emailTouched) {
+      const trimmed = nextEmail.trim()
+      setEmailError(trimmed && emailRegex.test(trimmed) ? '' : 'Please enter a valid email address.')
+    }
+  }
+  const handleEmailBlur = () => {
+    setEmailTouched(true)
+    const trimmed = guestInfo.email.trim()
+    setEmailError(trimmed && emailRegex.test(trimmed) ? '' : 'Please enter a valid email address.')
+  }
+  const setExtra = (k) => (e) => {
+    setExtras(ex => {
+      const next = { ...ex, [k]: e.target.checked }
+      setBookingExtras({ ...next, airportPickupFee: next.airportPickup ? 25 : 0 })
+      return next
+    })
+  }
 
-  const nights = getNights(dateState?.checkin, dateState?.checkout) || 1
+  const nights = getNights(dateState?.checkin, dateState?.checkout)
+  const hasValidDates = Boolean(dateState?.checkin && dateState?.checkout && dateState.checkout > dateState.checkin)
   const resolvedRoomPlans = normalizeRoomPlans(roomPlans, {
     roomCount: guestState?.rooms || 1,
     totalAdults: guestState?.adults || 2,
     totalChildren: guestState?.children || 0,
   })
   const totals = roomPlanTotals(resolvedRoomPlans)
-  const resolvedRoomSelections = normalizeRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
-  const pricing = roomSelectionTotals(resolvedRoomSelections, nights)
-  const roomTotal = pricing.roomTotal
-  const taxes = pricing.taxes
-  const grandTotal = pricing.grandTotal
+  const roomValidation = validateRoomSelections(roomSelections, resolvedRoomPlans, selectedHotel?.rooms || [])
+  const resolvedRoomSelections = roomValidation.selections
+  const roomTotal = roomValidation.isValid ? roomSelectionTotals(resolvedRoomSelections, nights).roomTotal : 0
+  const airportPickupFee = extras.airportPickup ? 25 : 0
+  const finalTotal = roomTotal + airportPickupFee
 
   const handleProceed = async () => {
-    if (!guestInfo.name || !guestInfo.email) { setError('Please fill in required guest information.'); return }
-    if (!selectedHotel || !resolvedRoomSelections.length || resolvedRoomSelections.some(selection => !selection?.room)) {
-      setError('No hotel or room selected. Please go back and select a room for each room plan.')
+    const trimmedEmail = guestInfo.email.trim()
+    if (!guestInfo.name || !trimmedEmail) { setError('Please fill in required guest information.'); return }
+    if (!emailRegex.test(trimmedEmail)) {
+      setEmailTouched(true)
+      setEmailError('Please enter a valid email address.')
+      setError('')
       return
     }
+    const normalizedNationality = normalizeNationalityInput(guestInfo.nationality)
+    if (!normalizedNationality) {
+      setError('Please select or enter a nationality.')
+      return
+    }
+    if (!hasValidDates) {
+      setError('Please select check-in and check-out dates before continuing.')
+      return
+    }
+    if (!selectedHotel) {
+      setError('No hotel selected. Please go back and choose a hotel.')
+      return
+    }
+    if (!roomValidation.isValid) {
+      setError(`Please select a room type for Room ${roomValidation.firstInvalidRoomNumber}.`)
+      return
+    }
+    setGuestInfo(g => ({ ...g, email: trimmedEmail, nationality: normalizedNationality }))
+    setEmailError('')
+    setBookingExtras({ ...extras, airportPickupFee })
     setLoading(true)
     setError('')
     try {
+      const latestRooms = await getHotelRooms(selectedHotel.id, {
+        checkin: dateState?.checkin,
+        checkout: dateState?.checkout,
+      })
+      const latestRoomMap = new Map(
+        (Array.isArray(latestRooms) ? latestRooms : []).map(room => [String(room.id), room])
+      )
+      const unavailableSelection = resolvedRoomSelections.find((selection) => {
+        const latestRoom = latestRoomMap.get(String(selection.room?.id ?? selection.roomId))
+        if (!latestRoom || latestRoom.available === false) return true
+        return Number(latestRoom.capacity || latestRoom.max_guests || 0) < Number(selection.guests || 0)
+      })
+      if (unavailableSelection) {
+        setError('Selected room is not available for these dates.')
+        return
+      }
+
       const roomAllocations = resolvedRoomSelections.map(selection => ({
         room_id: selection.room?.id ?? selection.roomId,
         room_type: selection.room?.room_type || selection.roomType || selection.room?.name || 'Room',
@@ -89,22 +157,34 @@ export default function BookingPage() {
         rooms: totals.roomCount,
         guest_name: guestInfo.name,
         guest_surname: guestInfo.surname,
-        guest_email: guestInfo.email,
+        guest_email: trimmedEmail,
         guest_phone: guestInfo.phone,
+        guest_nationality: normalizedNationality,
         room_count: totals.roomCount,
         total_adults: totals.totalAdults,
         total_children: totals.totalChildren,
         room_allocations: roomAllocations,
         special_requests: specialRequests.trim(),
-        extras,
-        total_price: grandTotal,
+        extras: { ...extras, airportPickupFee },
+        total_price: finalTotal,
+      })
+      console.log('Reservation payload:', {
+        hotel_id: selectedHotel.id,
+        room_id: roomAllocations[0]?.room_id,
+        check_in_date: dateState?.checkin,
+        check_out_date: dateState?.checkout,
+        guest_count: totals.totalGuests,
+        room_count: totals.roomCount,
+        total_price: finalTotal,
+        room_allocations: roomAllocations,
+        extras: { ...extras, airportPickupFee },
       })
       if (data.error) { setError(data.error); return }
       setReservationId(data.reservation_id || data.id)
-      setTotalPrice(grandTotal)
+      setTotalPrice(finalTotal)
       navigate('/payment')
-    } catch {
-      setError('Failed to create reservation. Please try again.')
+    } catch (err) {
+      setError(err?.message || 'Failed to create reservation. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -207,10 +287,33 @@ export default function BookingPage() {
               <div className="form-grid">
                 <input className="form-inp" placeholder="First name *" value={guestInfo.name} onChange={set('name')} required />
                 <input className="form-inp" placeholder="Last name *" value={guestInfo.surname} onChange={set('surname')} required />
-                <input className="form-inp" type="email" placeholder="Email *" value={guestInfo.email} onChange={set('email')} required />
+                <div>
+                  <input
+                    className={`form-inp${emailError ? ' error' : ''}`}
+                    type="email"
+                    placeholder="Email *"
+                    value={guestInfo.email}
+                    onChange={handleEmailChange}
+                    onBlur={handleEmailBlur}
+                    required
+                  />
+                  {emailError && <div className="field-error" style={{ marginTop: 6 }}>{emailError}</div>}
+                </div>
                 <input className="form-inp" type="tel" placeholder="Phone" value={guestInfo.phone} onChange={set('phone')} />
-                <input className="form-inp" placeholder="Nationality" value={guestInfo.nationality} onChange={set('nationality')} />
-                <input className="form-inp" type="date" placeholder="Date of birth" value={guestInfo.birthDate} onChange={set('birthDate')} />
+                <NationalityAutocomplete
+                  value={guestInfo.nationality}
+                  onChange={(next) => {
+                    setGuestInfo(g => ({ ...g, nationality: next }))
+                    setError('')
+                  }}
+                  onBlur={() => setError('')}
+                  placeholder="Nationality *"
+                />
+                <BookingDatePicker
+                  value={guestInfo.birthDate}
+                  onChange={(next) => setGuestInfo(g => ({ ...g, birthDate: next }))}
+                  placeholder="Date of birth"
+                />
               </div>
             </div>
 
@@ -225,7 +328,7 @@ export default function BookingPage() {
               </label>
               <label className="extra-chk">
                 <input type="checkbox" checked={extras.airportPickup} onChange={setExtra('airportPickup')} />
-                Airport pickup shuttle (+$25)
+                Airport pickup shuttle (+EUR 25)
               </label>
             </div>
           </div>
