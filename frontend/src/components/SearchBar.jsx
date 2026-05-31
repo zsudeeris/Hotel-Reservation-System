@@ -329,6 +329,7 @@ export default function SearchBar({ initialValues = {}, variant = 'home' }) {
           <GuestsSelector
             guests={guests}
             touched={guestsTouched}
+            compactValue={variant === 'landing'}
             onChange={(next) => { setGuests(next); setGuestsTouched(true); setDateError('') }}
           />
         </div>

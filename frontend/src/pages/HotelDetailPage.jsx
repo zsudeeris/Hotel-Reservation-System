@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Check, ChevronLeft, ChevronRight, Heart, MapPin, Minus, Plus, Star } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import LandingNavbar from '../components/LandingNavbar.jsx'
+import Footer from '../components/Footer.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import AvailableRooms from '../components/AvailableRooms.jsx'
 import { getHotel, getHotelReviews, getHotelRooms } from '../services/api.js'
@@ -210,6 +211,7 @@ function StateCard({ user, status, message, onRetry, onHome }) {
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }
@@ -390,6 +392,7 @@ export default function HotelDetailPage() {
       <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
         {user ? <Navbar /> : <div className="search-topbar"><LandingNavbar /></div>}
         <div className="page-loading">Loading hotel details...</div>
+        <Footer />
       </div>
     )
   }
@@ -785,6 +788,7 @@ export default function HotelDetailPage() {
           </aside>
         </section>
       </main>
+      <Footer />
     </div>
   )
 }

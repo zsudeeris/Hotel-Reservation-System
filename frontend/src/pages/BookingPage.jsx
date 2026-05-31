@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plane, Car, Plus, Trash2 } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import BookingSummary from '../components/BookingSummary.jsx'
 import NationalityAutocomplete from '../components/NationalityAutocomplete.jsx'
 import BookingDatePicker from '../components/BookingDatePicker.jsx'
@@ -356,6 +357,8 @@ export default function BookingPage() {
 
         <BookingSummary />
       </div>
+
+      <Footer />
     </div>
   )
 }

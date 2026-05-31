@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import PaymentForm from '../components/PaymentForm.jsx'
 import BookingSummary from '../components/BookingSummary.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
@@ -55,6 +56,8 @@ export default function PaymentPage() {
         </div>
         <BookingSummary />
       </div>
+
+      <Footer />
     </div>
   )
 }

@@ -2,6 +2,7 @@ import React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CheckCircle, Calendar, Home } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
+import Footer from '../components/Footer.jsx'
 import { useBooking } from '../context/BookingContext.jsx'
 import { getHotelName } from '../utils/hotelRouting.js'
 import { getNights, normalizeRoomPlans, roomPlanTotals, validateRoomSelections } from '../utils/bookingState.js'
@@ -109,6 +110,8 @@ export default function PaymentSuccessPage() {
           </div>
         </div>
       </div>
+
+      <Footer />
     </div>
   )
 }

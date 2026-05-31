@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react'
 import Navbar from '../components/Navbar.jsx'
 import SearchBar from '../components/SearchBar.jsx'
 import HotelCard from '../components/HotelCard.jsx'
+import Footer from '../components/Footer.jsx'
 import ChatBot from '../components/ChatBot.jsx'
 import { getHotels } from '../services/api.js'
 import { DEMO_HOTELS } from '../data/demoHotels.js'
@@ -113,6 +114,7 @@ export default function HomePage() {
         </div>
       )}
 
+      <Footer />
       <ChatBot />
     </div>
   )
